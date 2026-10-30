@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResQ — Offline Emergency Messaging & Safety Mesh System</title>
+  <meta name="description" content="Offline Emergency Messaging & Safety System featuring 5-module store-and-forward mesh, proximity tracking, ML Kit offline translation, and fall detection.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">ResQ <span class="badge-mesh">OFFLINE MESH</span></h1>
+        <p class="brand-subtitle">Emergency Mesh & Offline Safety Protocol</p>
+      </div>
+    </div>
+
+    <!-- Telemetry Status Bar -->
+    <div class="telemetry-bar">
+      <div class="telemetry-item" id="battery-telemetry">
+        <span class="telemetry-icon">⚡</span>
+        <span id="nav-battery-val">82%</span>
+        <span class="telemetry-badge" id="nav-battery-band">NORMAL</span>
+      </div>
+      <div class="telemetry-item" id="gps-telemetry">
+        <span class="telemetry-icon">🛰️</span>
+        <span id="nav-gps-val">Fix: ±12m</span>
+      </div>
+      <div class="telemetry-item" id="mesh-telemetry">
+        <span class="telemetry-icon">📡</span>
+        <span id="nav-peers-val">3 Nodes Online</span>
+      </div>
+      <div class="telemetry-item cloud-offline">
+        <span class="telemetry-icon">☁️</span>
+        <span>Offline Mode (Mesh Active)</span>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button class="btn btn-outline" id="btn-toggle-multi" onclick="toggleMultiNodeView()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        3-Node Mesh Studio
+      </button>
+      <button class="btn btn-sos-pulse" onclick="triggerGlobalSos()">
+        ⚠️ EMERGENCY SOS (P0)
+      </button>
+    </div>
+  </header>
+
+  <!-- Emergency Banner (Appears on active P0/P1) -->
+  <div class="emergency-banner" id="global-emergency-banner" style="display: none;">
+    <div class="emergency-banner-content">
+      <div class="pulse-ring"></div>
+      <div class="banner-icon">🚨</div>
+      <div class="banner-text">
+        <h4 id="banner-title">P0 CRITICAL SOS ACTIVE</h4>
+        <p id="banner-desc">Node A reported life-threatening emergency. Relayed to Node B & C.</p>
+      </div>
+    </div>
+    <div class="banner-actions">
+      <button class="btn btn-sm btn-safe" onclick="confirmSafety()">I AM SAFE</button>
+      <button class="btn btn-sm btn-ack" onclick="acknowledgeTopIncident()">ACKNOWLEDGE RECEIPT</button>
+      <button class="btn btn-sm btn-dismiss" onclick="dismissBanner()">DISMISS</button>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="main-container">
+    
+    <!-- Left Navigation Tabs (Mobile Viewport Selector) -->
+    <aside class="sidebar-tabs">
+      <button class="tab-btn active" onclick="switchTab('home')" id="tab-btn-home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('group')" id="tab-btn-group">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Group & Radar</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('chat')" id="tab-btn-chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Offline Chat</span>
+        <span class="tab-badge" id="chat-count">1</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('incidents')" id="tab-btn-incidents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Incidents</span>
+        <span class="tab-badge red" id="incident-count">0</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('settings')" id="tab-btn-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </button>
+      <button class="tab-btn highlight" onclick="switchTab('simulation')" id="tab-btn-sim">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Demo Controls</span>
+      </button>
+    </aside>
+
+    <!-- Center Phone / Primary Surface Viewport -->
+    <div class="phone-viewport-container" id="phone-container">
+      <div class="device-bezel">
+        <div class="device-speaker"></div>
+        <div class="device-screen">
+          
+          <!-- TAB 1: HOME SCREEN -->
+          <div class="app-screen" id="screen-home">
+            <div class="screen-header">
+              <span class="screen-title">ResQ Dashboard</span>
+              <span class="session-chip active">SESSION ACTIVE</span>
+            </div>
+
+            <!-- Big Interactive Emergency SOS Button -->
+            <div class="sos-center-container">
+              <div class="sos-glow-ring"></div>
+              <button class="sos-large-button" onclick="triggerGlobalSos()">
+                <div class="sos-icon">🚨</div>
+                <div class="sos-text">EMERGENCY SOS</div>
+                <div class="sos-sub">Tap to Broadcast P0</div>
+              </button>
+            </div>
+
+            <!-- Fast Action Grid -->
+            <div class="quick-grid">
+              <div class="quick-card" onclick="switchTab('group')">
+                <div class="quick-card-icon">👥</div>
+                <div class="quick-card-info">
+                  <div class="quick-title">Primary Buddy</div>
+                  <div class="quick-val" id="home-buddy-status">Ravi • 48m (Safe)</div>
+                </div>
+              </div>
+              <div class="quick-card" onclick="switchTab('group')">
+                <div class="quick-card-icon">🚩</div>
+                <div class="quick-card-info">
+                  <div class="quick-title">Meeting Point</div>
+                  <div class="quick-val" id="home-mp-status">Camp Alpha • 140m NE</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Session & Trust Details -->
+            <div class="card glass-card">
+              <div class="card-header">
+                <h3>Offline Mesh Identity</h3>
+                <span class="badge-cyan">ROLE: LEADER</span>
+              </div>
+              <div class="card-body">
+                <div class="meta-row">
+                  <span class="meta-label">Node ID:</span>
+                  <span class="meta-val font-mono" id="home-node-id">NODE_ALPHA_01</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Auth Protocol:</span>
+                  <span class="meta-val">HMAC-SHA256 Signed Envelope</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Radio Transport:</span>
+                  <span class="meta-val">BLE GATT & Nearby Cluster</span>
+                </div>
+                <div class="action-buttons-row">
+                  <button class="btn btn-sm btn-outline" onclick="showQrModal()">Show Trust QR</button>
+                  <button class="btn btn-sm btn-outline btn-danger" onclick="endSession()">End Session</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Risk Zone Banner -->
+            <div class="card zone-card" id="home-zone-card">
+              <div class="zone-icon">⚠️</div>
+              <div class="zone-info">
+                <h4>Active Offline Geofence: RED Hazard Zone</h4>
+                <p id="home-zone-text">Krishna Riverbed Surge Area (Radius: 450m). Low battery triggers mandatory check.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: GROUP & PROXIMITY SCREEN -->
+          <div class="app-screen" id="screen-group" style="display: none;">
+            <div class="screen-header">
+              <span class="screen-title">Group Tracking & Radar</span>
+              <button class="btn btn-xs btn-outline" onclick="openNewMeetingPointModal()">+ Meeting Point</button>
+            </div>
+
+            <!-- Meeting Point Bearing Compass Card -->
+            <div class="card guidance-card" id="mp-guidance-card">
+              <div class="compass-wrapper">
+                <div class="compass-arrow" id="compass-arrow" style="transform: rotate(45deg);">➤</div>
+              </div>
+              <div class="guidance-details">
+                <h4 id="mp-guidance-title">Rendezvous Point Alpha</h4>
+                <div class="guidance-meta">
+                  <span class="guidance-distance" id="mp-distance">142m</span>
+                  <span class="guidance-bearing" id="mp-bearing">45° NE</span>
+                  <span class="badge-mesh">Rev 3</span>
+                </div>
+                <p class="disclaimer-text">⚠️ Straight-line direction; obstacles and terrain not considered.</p>
+              </div>
+            </div>
+
+            <!-- Proximity Radar Visualizer -->
+            <div class="radar-container">
+              <div class="radar-circle ring-crit"></div>
+              <div class="radar-circle ring-warn"></div>
+              <div class="radar-circle ring-safe"></div>
+              <div class="radar-sweep"></div>
+              <!-- Peer Blips -->
+              <div class="radar-blip self" title="You (Node A)"></div>
+              <div class="radar-blip peer-b" id="blip-b" title="Peer Ravi (Node B)"></div>
+              <div class="radar-blip peer-c" id="blip-c" title="Peer Priya (Node C)"></div>
+              <div class="radar-labels">
+                <span>Safe (50m)</span>
+                <span>Warning (100m)</span>
+                <span>Critical</span>
+              </div>
+            </div>
+
+            <!-- Authorized Peer List -->
+            <h4 class="section-title">Monitored Peers (3)</h4>
+            <div class="peer-list">
+              <div class="peer-card">
+                <div class="peer-avatar">👨🏽‍💼</div>
+                <div class="peer-info">
+                  <div class="peer-name">Ravi Kumar <span class="badge-buddy">PRIMARY BUDDY</span></div>
+                  <div class="peer-coords" id="peer-b-status">Distance: 48m (±12m) • Last seen: 4s ago</div>
+                </div>
+                <div class="peer-state state-safe">SAFE</div>
+              </div>
+              <div class="peer-card">
+                <div class="peer-avatar">👩🏻‍🔬</div>
+                <div class="peer-info">
+                  <div class="peer-name">Priya Sharma <span class="badge-mesh">NODE C</span></div>
+                  <div class="peer-coords" id="peer-c-status">Distance: 118m (±18m) • Relayed via Node B</div>
+                </div>
+                <div class="peer-state state-crit">CRITICAL DISTANCE</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: OFFLINE CHAT & TRANSLATION -->
+          <div class="app-screen" id="screen-chat" style="display: none;">
+            <div class="screen-header">
+              <span class="screen-title">Offline Mesh Chat</span>
+              <div class="lang-selector-wrapper">
+                <label for="lang-select">Translate to:</label>
+                <select id="lang-select" onchange="changePreferredLanguage()">
+                  <option value="en">English (en)</option>
+                  <option value="te" selected>Telugu (తెలుగు)</option>
+                  <option value="hi">Hindi (हिन्दी)</option>
+                  <option value="ta">Tamil (தமிழ்)</option>
+                  <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Chat Messages Container -->
+            <div class="chat-messages" id="chat-messages-container">
+              <!-- Seed message in Telugu -->
+              <div class="chat-bubble peer">
+                <div class="bubble-header">
+                  <span class="bubble-sender">Ravi (Node B)</span>
+                  <span class="bubble-tag">Lang: TE (Telugu)</span>
+                </div>
+                <div class="bubble-text">వంతెన కూలిపోయింది మరియు ముగ్గురు వ్యక్తులు చిక్కుకున్నారు. నీరు మరియు ఆహారం లేదు. మేము వెంటనే సహాయం కోరుతున్నాము.</div>
+                
+                <!-- On-device translated derivative -->
+                <div class="translation-box">
+                  <div class="trans-header">
+                    <span>ML Kit Local Translation (English):</span>
+                  </div>
+                  <div class="trans-text">The bridge has collapsed and three people are trapped. There is no water or food. We are requesting immediate help.</div>
+                </div>
+
+                <!-- Extractive summary -->
+                <div class="summary-chip" onclick="toggleSummary(this)">
+                  <span class="summary-label">⚡ Rule-Based Summary:</span>
+                  <span class="summary-content">Bridge collapsed and 3 people are trapped with no water or food.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Input bar -->
+            <div class="chat-input-row">
+              <input type="text" id="chat-input" placeholder="Type emergency message (auto-relayed)..." onkeypress="handleChatKey(event)">
+              <button class="btn btn-cyan" onclick="sendChatMessage()">SEND</button>
+            </div>
+          </div>
+
+          <!-- TAB 4: INCIDENTS & DELIVERY TRACKING -->
+          <div class="app-screen" id="screen-incidents" style="display: none;">
+            <div class="screen-header">
+              <span class="screen-title">Incident Tracking & Delivery</span>
+              <span class="badge-mesh">DURABLE OUTBOX</span>
+            </div>
+
+            <div class="incidents-list" id="incidents-container">
+              <!-- Injected dynamically -->
+            </div>
+          </div>
+
+          <!-- TAB 5: SETTINGS & READINESS -->
+          <div class="app-screen" id="screen-settings" style="display: none;">
+            <div class="screen-header">
+              <span class="screen-title">Settings & Readiness</span>
+            </div>
+
+            <div class="card glass-card">
+              <h3>Offline ML Kit Language Packs</h3>
+              <p class="card-sub">Pre-download weights before entering off-grid zones.</p>
+              <div class="pack-list">
+                <div class="pack-item">
+                  <span>Telugu (తెలుగు)</span>
+                  <span class="pack-status downloaded">✓ Installed (32 MB)</span>
+                </div>
+                <div class="pack-item">
+                  <span>Hindi (हिन्दी)</span>
+                  <span class="pack-status downloaded">✓ Installed (29 MB)</span>
+                </div>
+                <div class="pack-item">
+                  <span>Tamil (தமிழ்)</span>
+                  <span class="pack-status downloaded">✓ Installed (31 MB)</span>
+                </div>
+                <div class="pack-item">
+                  <span>Kannada (ಕನ್ನಡ)</span>
+                  <span class="pack-status downloaded">✓ Installed (30 MB)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card glass-card">
+              <h3>Separation Distance Thresholds</h3>
+              <div class="setting-slider">
+                <label>Warning Distance: <span id="lbl-warn">50m</span></label>
+                <input type="range" min="20" max="80" value="50" oninput="updateWarningDist(this.value)">
+              </div>
+              <div class="setting-slider">
+                <label>Critical Distance: <span id="lbl-crit">100m</span></label>
+                <input type="range" min="90" max="200" value="100" oninput="updateCritDist(this.value)">
+              </div>
+            </div>
+
+            <div class="card glass-card">
+              <h3>Fall Detection & Sensors</h3>
+              <div class="toggle-row">
+                <span>Enable 3-Phase Motion Detection</span>
+                <input type="checkbox" checked id="chk-fall">
+              </div>
+              <p class="card-sub">Free-fall (&lt;0.5G) $\rightarrow$ Impact (&gt;2.5G) $\rightarrow$ Stillness (2.5s).</p>
+            </div>
+          </div>
+
+          <!-- TAB 6: DEMO CONTROLS (ISOLATED SIMULATOR) -->
+          <div class="app-screen" id="screen-simulation" style="display: none;">
+            <div class="screen-header">
+              <span class="screen-title">Demo Control Center</span>
+              <span class="badge-demo">SIMULATED DATA</span>
+            </div>
+
+            <p class="demo-notice">Interactive triggers for testing multi-node mesh scenarios during evaluation.</p>
+
+            <div class="demo-buttons-grid">
+              <button class="btn btn-outline" onclick="simSeparation(20)">Dist 20m (Safe)</button>
+              <button class="btn btn-outline" onclick="simSeparation(70)">Dist 70m (Warn)</button>
+              <button class="btn btn-outline btn-danger" onclick="simSeparation(120)">Dist 120m (Critical)</button>
+              <button class="btn btn-outline" onclick="simDegradedGps()">Degraded GPS (±85m)</button>
+              <button class="btn btn-outline btn-sos" onclick="simFallTrigger()">Simulate Fall Impact</button>
+              <button class="btn btn-outline" onclick="simBatteryDrop(9)">Battery 9% in RED Zone</button>
+              <button class="btn btn-outline" onclick="simBatteryDrop(4)">Battery 4% Critical</button>
+              <button class="btn btn-outline btn-cyan" onclick="simThreeNodeRelay()">Run 3-Node Relay</button>
+            </div>
+
+            <div class="sim-log-card">
+              <div class="sim-log-header">
+                <span>Simulation Event Stream</span>
+                <button class="btn btn-xs" onclick="clearSimLog()">Clear</button>
+              </div>
+              <div class="sim-log-body font-mono" id="sim-log">
+                [00:00:01] System booted. Mesh engine initialized on channel BLE-01.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side: 3-Node Multi-Hop Interactive Studio -->
+    <section class="multi-node-studio" id="multi-node-studio">
+      <div class="studio-header">
+        <h2>3-Node Store-and-Forward Mesh Studio</h2>
+        <p>Live visualization of Node A $\leftrightarrow$ Node B $\leftrightarrow$ Node C store-and-forward routing. Node A has <strong>NO</strong> direct radio path to Node C.</p>
+      </div>
+
+      <!-- Network Diagram -->
+      <div class="network-topology-canvas">
+        <div class="node-box" id="node-box-a">
+          <div class="node-badge">ORIGINATOR</div>
+          <div class="node-avatar">📱 Node A</div>
+          <div class="node-role">Captain Alpha (Leader)</div>
+          <div class="node-stats">
+            <div>Fix: <strong>±12m</strong></div>
+            <div>Bat: <strong>82%</strong></div>
+          </div>
+          <button class="btn btn-xs btn-sos" onclick="triggerNodeASos()">Broadcast P0</button>
+        </div>
+
+        <div class="mesh-link-line" id="link-a-b">
+          <div class="packet-dot" id="packet-ab"></div>
+          <span class="link-label">BLE GATT P2P (Active)</span>
+        </div>
+
+        <div class="node-box" id="node-box-b">
+          <div class="node-badge relay">RELAY NODE</div>
+          <div class="node-avatar">📡 Node B</div>
+          <div class="node-role">Ravi (Store & Forward)</div>
+          <div class="node-stats">
+            <div>Hop: <strong>1</strong></div>
+            <div>Queue: <strong>0 pending</strong></div>
+          </div>
+          <div class="node-tag">Automatic Forwarding</div>
+        </div>
+
+        <div class="mesh-link-line" id="link-b-c">
+          <div class="packet-dot" id="packet-bc"></div>
+          <span class="link-label">Nearby Cluster (Active)</span>
+        </div>
+
+        <div class="node-box" id="node-box-c">
+          <div class="node-badge recipient">RECIPIENT</div>
+          <div class="node-avatar">📱 Node C</div>
+          <div class="node-role">Priya (Rescue Team)</div>
+          <div class="node-stats">
+            <div>Status: <strong>Listening</strong></div>
+            <div>Receipt: <strong id="node-c-receipt">Waiting</strong></div>
+          </div>
+          <div class="node-tag">Auto-Stores & Acks</div>
+        </div>
+      </div>
+
+      <!-- Direct A-C Missing Link Note -->
+      <div class="no-link-warning">
+        <span>❌ No Direct Radio Path Between Node A and Node C (RF Obstructed) — Store-and-Forward Guaranteed via Node B</span>
+      </div>
+
+      <!-- Live Packet Inspector -->
+      <div class="packet-inspector card glass-card">
+        <div class="card-header">
+          <h3>Live Mesh Packet Inspector (Canonical Envelope)</h3>
+          <span class="badge-cyan font-mono" id="inspector-schema">SCHEMA: V1</span>
+        </div>
+        <div class="card-body">
+          <pre class="json-viewer font-mono" id="packet-json-viewer">
+{
+  "schemaVersion": 1,
+  "messageId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "sessionId": "SESSION_1730342400000",
+  "originId": "NODE_ALPHA_01",
+  "intendedRecipients": ["NODE_CHARLIE_03"],
+  "messageKind": "incident",
+  "hopCount": 0,
+  "maxHops": 5,
+  "relayPath": ["NODE_ALPHA_01"],
+  "signature": "hmac_sha256_verified_ok"
+}
+          </pre>
+        </div>
+      </div>
+
+      <!-- Live Receipt History Table -->
+      <div class="receipt-table-card card glass-card">
+        <div class="card-header">
+          <h3>Exact-Revision Receipts Accounting</h3>
+          <span class="badge-mesh">CONFIRMED DELIVERY</span>
+        </div>
+        <div class="table-responsive">
+          <table class="receipt-table font-mono" id="receipt-table">
+            <thead>
+              <tr>
+                <th>Referenced ID</th>
+                <th>Rev</th>
+                <th>Recipient Node</th>
+                <th>Receipt Type</th>
+                <th>Delivery Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="receipt-tbody">
+              <tr>
+                <td>INC-BOOT</td>
+                <td>1</td>
+                <td>NODE_BRAVO_02</td>
+                <td>STORED</td>
+                <td>Just now</td>
+                <td><span class="badge-safe">VERIFIED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Safety Check Interactive Modal Dialog -->
+  <div class="modal-backdrop" id="safety-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-icon">⚠️</div>
+      <h3 id="modal-title">Safety Check Required</h3>
+      <p id="modal-desc">Possible fall detected. Are you okay?</p>
+      
+      <div class="modal-countdown">
+        <div class="countdown-bar">
+          <div class="countdown-progress" id="countdown-progress"></div>
+        </div>
+        <span id="countdown-text">30 seconds remaining</span>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-safe" onclick="handleModalResponse('safe')">I AM SAFE</button>
+        <button class="btn btn-sos" onclick="handleModalResponse('help')">NEED HELP (P0)</button>
+      </div>
+      <div class="modal-footer" id="modal-snooze-row">
+        <button class="btn btn-link" onclick="handleModalResponse('snooze')">Remind me in 5 minutes (Snooze)</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

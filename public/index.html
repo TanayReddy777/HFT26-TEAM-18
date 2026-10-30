@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ResQ — Offline Emergency Safety System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20261031_03">
+</head>
+<body>
+
+  <!-- Ambient Dark Navy Canvas -->
+  <div class="app-viewport-wrapper" id="viewport-wrapper">
+    
+    <!-- Desktop Top Helper Bar (Hidden on Mobile) -->
+    <div class="desktop-helper-bar">
+      <div class="live-pill">● LIVE WORKING MODEL</div>
+      <div class="wifi-tip">📲 Test on Phone: <code>http://172.34.12.124:3000</code></div>
+      <button class="btn-toggle-frame" onclick="togglePhoneFrame()" id="frame-toggle-btn">📱 Toggle Fullscreen View</button>
+    </div>
+
+    <!-- Android Flagship Device Bezel -->
+    <div class="android-device-frame" id="device-frame">
+      
+      <!-- Top Speaker & Camera Punch-hole -->
+      <div class="device-notch-bar">
+        <div class="device-speaker"></div>
+      </div>
+
+      <!-- Android Screen Surface -->
+      <div class="android-screen">
+        
+        <!-- Status Bar (Battery, WiFi/Offline, Time) -->
+        <div class="android-status-bar">
+          <span class="status-time" id="device-clock">04:20</span>
+          <div class="status-icons">
+            <span class="status-badge-offline" id="status-mesh-badge">OFFLINE MESH</span>
+            <span class="status-icon" title="Cellular Offline">📶</span>
+            <span class="status-icon" id="status-battery-icon">🔋 85%</span>
+          </div>
+        </div>
+
+        <!-- App Brand Dynamic Header -->
+        <header class="home-header">
+          <div class="brand-left">
+            <div class="shield-logo" id="header-logo-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91c4.59-1.15 8-5.86 8-10.91V5L12 2z"/>
+                <path d="M12 12v9c-3.72-1.15-6.47-4.82-7-8.94V6.3l7-2.6V12h7v.09c-.1.78-.32 1.54-.64 2.26" fill="#06B6D4" opacity="0.3"/>
+              </svg>
+            </div>
+            <div>
+              <h1 class="app-name" id="header-title">ResQ</h1>
+              <p class="app-sub" id="header-subtitle">OFFLINE SAFETY</p>
+            </div>
+          </div>
+
+          <!-- Active Status Pill -->
+          <div class="status-pill-green" id="header-status-pill">
+            <span class="green-dot"></span>
+            <span id="header-status-text">Mesh Active</span>
+          </div>
+        </header>
+
+        <!-- SCREEN 1: HOME DASHBOARD -->
+        <div id="view-home" class="screen-view active">
+          
+          <!-- Quick Telemetry Row (Network Status & Nearby Devices) -->
+          <div class="telemetry-grid">
+            <div class="m3-card telemetry-card" onclick="navTo('devices')">
+              <div class="card-icon-wrap cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+              </div>
+              <div class="card-caption">Mesh Network</div>
+              <div class="card-value" id="card-network-val">Offline Active</div>
+              <div class="card-sub-tag cyan">Zero Internet</div>
+            </div>
+
+            <div class="m3-card telemetry-card" onclick="navTo('devices')">
+              <div class="card-icon-wrap cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="4" width="16" height="12" rx="2"/>
+                  <line x1="8" y1="20" x2="16" y2="20"/>
+                  <line x1="12" y1="16" x2="12" y2="20"/>
+                </svg>
+              </div>
+              <div class="card-caption">Nearby Devices</div>
+              <div class="card-value" id="card-devices-val">3 Devices</div>
+              <div class="card-sub-tag cyan">BLE &amp; Nearby</div>
+            </div>
+          </div>
+
+          <!-- Primary Action: Large Circular SOS Button -->
+          <div class="sos-center-area">
+            <div class="sos-glow-circle" id="sos-ambient-glow"></div>
+            
+            <button class="sos-circular-button" id="main-sos-btn" onclick="handleSosPress()">
+              <div class="sos-icon-graphic">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+              </div>
+              <span class="sos-title-text">EMERGENCY SOS</span>
+              <span class="sos-subtitle-text">Tap to Broadcast P0</span>
+            </button>
+          </div>
+
+          <!-- Emergency Active Banner -->
+          <div class="emergency-state-banner" id="active-emergency-card" style="display: none;">
+            <div class="banner-top-row">
+              <span class="p0-badge">P0 CRITICAL SOS</span>
+              <span class="live-dot-pulse">● LIVE BROADCAST</span>
+            </div>
+            <p class="banner-message" id="banner-incident-text">Emergency help broadcasted across mesh to all 3 devices.</p>
+            <div class="banner-actions">
+              <button class="btn-safe-cancel" onclick="handleSafeCheckIn()">✅ I AM SAFE (CANCEL ALERT)</button>
+            </div>
+          </div>
+
+          <!-- Fall Simulation Quick Trigger Card -->
+          <div class="m3-card fall-test-card" onclick="triggerFallSimulation()">
+            <div class="fall-test-left">
+              <div class="fall-badge-icon">🏃💥</div>
+              <div>
+                <div class="card-caption">Fall Detection Sensor</div>
+                <div class="fall-title">Simulate Hard Impact Fall</div>
+              </div>
+            </div>
+            <span class="fall-btn-action">TEST SENSOR ›</span>
+          </div>
+
+          <!-- Last Emergency Activity Card -->
+          <div class="m3-card activity-card" id="card-last-activity" onclick="navTo('inbox')">
+            <div class="activity-header">
+              <div class="activity-title-group">
+                <div class="activity-icon-wrap" id="activity-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <span class="activity-header-title">Last Emergency Activity</span>
+              </div>
+              <span class="activity-timestamp" id="activity-time-tag">Just now</span>
+            </div>
+            <div class="activity-divider"></div>
+            <div class="activity-body">
+              <div class="activity-headline" id="activity-headline-text">No Recent Emergency Incidents</div>
+              <div class="activity-detail" id="activity-detail-text">All 3 connected peers acknowledging current revision</div>
+            </div>
+          </div>
+
+          <!-- Group Meeting Spot Guidance Card -->
+          <div class="m3-card meeting-card" onclick="navTo('settings')">
+            <div class="compass-circle">
+              <div class="compass-pointer">➤</div>
+            </div>
+            <div class="meeting-text-area">
+              <span class="meeting-caption">GROUP MEETING SPOT</span>
+              <h4 class="meeting-title" id="meeting-title-text">Camp Alpha (Lake Bridge)</h4>
+              <p class="meeting-guidance-sub" id="meeting-guidance-text">140m • 45° NE • Straight-line</p>
+            </div>
+            <div class="meeting-chevron">›</div>
+          </div>
+
+        </div>
+
+        <!-- SCREEN 2: EMERGENCY MESSAGE SCREEN (SOS TAB) -->
+        <div id="view-sos" class="screen-view">
+          <div class="screen-heading-wrap">
+            <h2 class="view-title">Emergency Dispatch</h2>
+            <p class="view-desc">Select priority and broadcast compressed mesh packet</p>
+          </div>
+
+          <!-- Priority Chips -->
+          <div class="priority-selector-row">
+            <button class="priority-chip p0 active" id="chip-p0" onclick="selectPriority('P0')">
+              <span class="chip-dot"></span> P0 Critical
+            </button>
+            <button class="priority-chip p1" id="chip-p1" onclick="selectPriority('P1')">
+              <span class="chip-dot"></span> P1 Urgent
+            </button>
+            <button class="priority-chip p2" id="chip-p2" onclick="selectPriority('P2')">
+              <span class="chip-dot"></span> P2 Warning
+            </button>
+          </div>
+
+          <!-- Quick Templates -->
+          <div class="section-label">ONE-TAP EMERGENCY TEMPLATES</div>
+          <div class="templates-grid">
+            <button class="template-btn" onclick="applyTemplate('🚨 Trapped under debris, need extrication')">
+              🚨 Trapped under debris
+            </button>
+            <button class="template-btn" onclick="applyTemplate('🩸 Severe injury / bleeding, need first aid kit')">
+              🩸 Severe injury / trauma
+            </button>
+            <button class="template-btn" onclick="applyTemplate('⚠️ Separated from team, low phone battery')">
+              ⚠️ Separated / low power
+            </button>
+            <button class="template-btn" onclick="applyTemplate('🌊 Flash flood warning, heading to high ground')">
+              🌊 Flash flood / water rising
+            </button>
+          </div>
+
+          <!-- Custom Message Input -->
+          <div class="section-label">INCIDENT MESSAGE (MAX 140 BYTES)</div>
+          <div class="message-input-box">
+            <textarea id="sos-input-text" rows="3" placeholder="Enter emergency message for nearby mesh devices..." oninput="handleCharCount()"></textarea>
+            <div class="input-meta-bar">
+              <span class="char-count" id="sos-char-counter">0 / 140 bytes</span>
+              <span class="mesh-codec-tag">GZIP + HMAC-SHA256</span>
+            </div>
+          </div>
+
+          <!-- Auto Attached Telemetry Card -->
+          <div class="m3-card telemetry-attach-card">
+            <div class="attach-title">📡 Auto-Attached Telemetry</div>
+            <div class="attach-grid">
+              <div class="attach-item">📍 GPS: 17.4435° N, 78.3489° E (±4m)</div>
+              <div class="attach-item">🔋 Battery: <span id="sos-battery-tag">85%</span></div>
+              <div class="attach-item">🔄 TTL Budget: 3 Mesh Hops</div>
+              <div class="attach-item">🛡️ Recipient: Flood to All Nodes</div>
+            </div>
+          </div>
+
+          <!-- Primary Dispatch Button -->
+          <button class="btn-primary-dispatch" id="btn-broadcast-sos" onclick="dispatchSosMessage()">
+            🚨 TRANSMIT TO MESH (ALL NODES)
+          </button>
+
+          <!-- Simulated Mesh Relay Visualizer -->
+          <div class="m3-card relay-trace-card" id="relay-trace-card" style="display: none;">
+            <div class="relay-trace-title">⚡ Live Multi-Hop Mesh Relay</div>
+            <div class="relay-steps">
+              <div class="relay-step active">
+                <span class="node-circle">📱</span>
+                <span class="node-name">You (Local)</span>
+              </div>
+              <span class="relay-arrow">➔</span>
+              <div class="relay-step active">
+                <span class="node-circle">📡</span>
+                <span class="node-name">Ravi (Hop 1)</span>
+              </div>
+              <span class="relay-arrow">➔</span>
+              <div class="relay-step active">
+                <span class="node-circle">📍</span>
+                <span class="node-name">Anil (Hop 2)</span>
+              </div>
+            </div>
+            <div class="relay-receipt" id="relay-receipt-text">✓ Delivered &amp; Cryptographically Acknowledged (STORED)</div>
+          </div>
+        </div>
+
+        <!-- SCREEN 3: NEARBY DEVICES SCREEN -->
+        <div id="view-devices" class="screen-view">
+          <div class="screen-heading-wrap">
+            <div class="devices-header-row">
+              <div>
+                <h2 class="view-title">Mesh Radar</h2>
+                <p class="view-desc">Pure Device-to-Device BLE &amp; WiFi-Direct</p>
+              </div>
+              <button class="btn-scan-radar" id="btn-scan" onclick="triggerDeviceScan()">
+                <span class="scan-radar-icon">🔄</span> Scan
+              </button>
+            </div>
+          </div>
+
+          <!-- Topology Summary -->
+          <div class="m3-card topology-summary-card">
+            <div class="topology-left">
+              <div class="mesh-nodes-count" id="mesh-nodes-count">3</div>
+              <div>
+                <div class="mesh-count-label">Peers in Direct / Multi-Hop Range</div>
+                <div class="mesh-status-sub">Zero Internet • Decentralized Mesh</div>
+              </div>
+            </div>
+            <span class="mesh-key-badge">AES-128</span>
+          </div>
+
+          <!-- Dynamic Devices List -->
+          <div class="section-label">CONNECTED MESH NODES</div>
+          <div class="devices-list" id="devices-container">
+            <!-- Dynamically populated via JS -->
+          </div>
+
+          <!-- Add Node / Gateway Card -->
+          <div class="m3-card beacon-card">
+            <div class="beacon-info">
+              <div class="beacon-icon">🛰️</div>
+              <div>
+                <div class="beacon-title">Emergency Satellite Bridge</div>
+                <div class="beacon-sub">Beacon #4 • 240m away • Listening for P0</div>
+              </div>
+            </div>
+            <button class="btn-ping-beacon" onclick="pingNode('Satellite Bridge')">Ping Node</button>
+          </div>
+        </div>
+
+        <!-- SCREEN 4: INBOX SCREEN -->
+        <div id="view-inbox" class="screen-view">
+          <div class="screen-heading-wrap">
+            <h2 class="view-title">Encrypted Inbox</h2>
+            <p class="view-desc">Decentralized Mesh Store-and-Forward Messages</p>
+          </div>
+
+          <!-- Inbox Filter Tabs -->
+          <div class="inbox-filters">
+            <button class="filter-tab active" onclick="filterInbox('all')">All Messages</button>
+            <button class="filter-tab" onclick="filterInbox('p0')">P0 SOS Alerts</button>
+            <button class="filter-tab" onclick="filterInbox('safe')">Status Check-ins</button>
+          </div>
+
+          <!-- Messages Container -->
+          <div class="inbox-messages-container" id="inbox-messages-container">
+            <!-- Messages rendered dynamically -->
+          </div>
+
+          <!-- Sticky Chat Composer -->
+          <div class="inbox-composer-bar">
+            <input type="text" id="inbox-input-msg" placeholder="Type offline message..." onkeydown="if(event.key==='Enter') sendInboxMessage()">
+            <button class="btn-send-inbox" onclick="sendInboxMessage()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- SCREEN 5: SETTINGS SCREEN -->
+        <div id="view-settings" class="screen-view">
+          <div class="screen-heading-wrap">
+            <h2 class="view-title">Safety Settings</h2>
+            <p class="view-desc">Sensors, Power Bands &amp; Rendezvous Config</p>
+          </div>
+
+          <!-- 1. Power Conservation Band Controller -->
+          <div class="m3-card settings-card">
+            <div class="settings-card-header">
+              <div class="settings-title">🔋 Power Conservation State Machine</div>
+              <span class="power-band-badge" id="power-band-badge">NORMAL BAND</span>
+            </div>
+            <p class="settings-explainer">Slide to simulate phone battery discharge and verify automatic power-saving modes.</p>
+            <div class="battery-slider-row">
+              <input type="range" min="1" max="100" value="85" class="battery-range" id="battery-slider" oninput="handleBatterySlider(this.value)">
+              <span class="battery-val-text" id="battery-slider-num">85%</span>
+            </div>
+            <div class="battery-band-indicator" id="battery-band-desc">
+              ● All sensors active. High-frequency BLE beacon broadcast.
+            </div>
+          </div>
+
+          <!-- 2. Group Meeting Spot Config -->
+          <div class="m3-card settings-card">
+            <div class="settings-title">📍 Group Meeting Point (Rendezvous)</div>
+            <p class="settings-explainer">Emergency rally location synced across all connected devices via Rev counter.</p>
+            <div class="meeting-edit-row">
+              <input type="text" class="meeting-input" id="setting-meeting-input" value="Camp Alpha (Lake Bridge)">
+              <button class="btn-save-meeting" onclick="saveMeetingPoint()">Update</button>
+            </div>
+            <div class="meeting-geo-info">
+              <span>Compass Guidance: <strong>45° NE • 140m</strong></span>
+              <span>Revision: <strong>Rev 2 (Signed)</strong></span>
+            </div>
+          </div>
+
+          <!-- 3. Fall Detection Calibration -->
+          <div class="m3-card settings-card">
+            <div class="settings-title">🏃 Sudden Fall Detection Sensitivity</div>
+            <p class="settings-explainer">Tri-axis accelerometer threshold (Free-fall &gt; 2.5g + 10s stillness).</p>
+            <div class="settings-action-row">
+              <select class="settings-select" id="fall-sensitivity-select">
+                <option value="high">High Sensitivity (Backpacking / Trekking)</option>
+                <option value="med" selected>Medium Sensitivity (Standard Emergency)</option>
+                <option value="low">Low Sensitivity (High Vibration Environment)</option>
+              </select>
+              <button class="btn-test-fall-inline" onclick="triggerFallSimulation()">🧪 Test Drop</button>
+            </div>
+          </div>
+
+          <!-- 4. Mesh Security & Node Fingerprint -->
+          <div class="m3-card settings-card">
+            <div class="settings-title">🛡️ Mesh Security &amp; Encryption</div>
+            <div class="security-meta-list">
+              <div class="security-item">
+                <span class="sec-label">Local Node ID:</span>
+                <span class="sec-val">RESQ-CLIENT-01</span>
+              </div>
+              <div class="security-item">
+                <span class="sec-label">HMAC-SHA256 Key:</span>
+                <span class="sec-val">9e8a...331b (Group Shared)</span>
+              </div>
+              <div class="security-item">
+                <span class="sec-label">Relay Mode:</span>
+                <span class="sec-val cyan">Auto Packet Repeater [ACTIVE]</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hackathon Verification Footer -->
+          <div class="hackathon-footer">
+            <p><strong>ResQ Offline Safety System</strong> • Hackathon MVP</p>
+            <p>Architecture: Dual Native Android (Java) + Edge Mesh Engine</p>
+            <p>Verification: 18/18 Automated Core Logic Checks Passed (100%)</p>
+          </div>
+        </div>
+
+        <!-- Material 3 Bottom Navigation Bar -->
+        <nav class="m3-bottom-nav">
+          <button class="nav-item active" id="nav-btn-home" onclick="navTo('home')">
+            <div class="nav-icon-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <span class="nav-label">Home</span>
+          </button>
+
+          <button class="nav-item" id="nav-btn-sos" onclick="navTo('sos')">
+            <div class="nav-icon-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="nav-label">SOS</span>
+          </button>
+
+          <button class="nav-item" id="nav-btn-devices" onclick="navTo('devices')">
+            <div class="nav-icon-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="4" width="16" height="12" rx="2"/>
+                <line x1="8" y1="20" x2="16" y2="20"/>
+                <line x1="12" y1="16" x2="12" y2="20"/>
+              </svg>
+            </div>
+            <span class="nav-label">Devices</span>
+          </button>
+
+          <button class="nav-item" id="nav-btn-inbox" onclick="navTo('inbox')">
+            <div class="nav-icon-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+                <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+              </svg>
+            </div>
+            <span class="nav-label">Inbox</span>
+          </button>
+
+          <button class="nav-item" id="nav-btn-settings" onclick="navTo('settings')">
+            <div class="nav-icon-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </div>
+            <span class="nav-label">Settings</span>
+          </button>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: SOS CONFIRMATION DIALOG -->
+  <div class="m3-dialog-backdrop" id="sos-confirm-dialog" style="display: none;">
+    <div class="m3-dialog-card">
+      <div class="dialog-icon-badge">🚨</div>
+      <h3 class="dialog-title">Broadcast Emergency SOS?</h3>
+      <p class="dialog-message">This will immediately transmit a P0 priority emergency alert across the offline mesh to all nearby devices with your GPS coordinates.</p>
+      <div class="dialog-actions">
+        <button class="dialog-btn-cancel" onclick="dismissSosDialog()">CANCEL</button>
+        <button class="dialog-btn-confirm" onclick="confirmSosBroadcast()">SEND SOS NOW</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: FALL DETECTION 15-SECOND COUNTDOWN -->
+  <div class="m3-dialog-backdrop" id="fall-countdown-dialog" style="display: none;">
+    <div class="m3-dialog-card fall-alert-modal">
+      <div class="fall-modal-icon">⚠️</div>
+      <h3 class="dialog-title text-red">HARD FALL DETECTED!</h3>
+      <p class="dialog-message">Impact detected by accelerometer. Auto-escalating to Emergency SOS in:</p>
+      <div class="countdown-circle">
+        <span id="fall-countdown-secs">15</span>
+        <span class="countdown-unit">SECONDS</span>
+      </div>
+      <div class="fall-dialog-actions">
+        <button class="btn-fall-safe" onclick="cancelFallAlert()">✅ I AM OKAY (CANCEL)</button>
+        <button class="btn-fall-sos" onclick="triggerFallSosNow()">🚨 SEND SOS NOW</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=20261031_03"></script>
+</body>
+</html>

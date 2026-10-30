@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ResQ</string>
+    <string name="app_subtitle">Offline Emergency Mesh</string>
+
+    <!-- Home Dashboard Strings -->
+    <string name="dashboard_title">Emergency Dashboard</string>
+    <string name="sos_primary_action">EMERGENCY SOS</string>
+    <string name="sos_subtext">Tap to Broadcast P0 Alert</string>
+    <string name="sos_broadcasted_toast">P0 Emergency Alert broadcasted to nearby devices!</string>
+    <string name="status_safe_title">System Normal</string>
+    <string name="status_safe_subtitle">All nearby devices connected and responsive</string>
+
+    <!-- Connection & Devices Overview -->
+    <string name="network_status_label">Mesh Network</string>
+    <string name="network_status_active">Offline Mesh Active</string>
+    <string name="network_status_sub">Zero Internet Required</string>
+    <string name="nearby_devices_label">Nearby Devices</string>
+    <string name="nearby_devices_count">3 Devices</string>
+    <string name="nearby_devices_sub">Direct BLE &amp; Nearby</string>
+
+    <!-- Last Emergency Activity -->
+    <string name="last_activity_title">Last Emergency Activity</string>
+    <string name="activity_type_none">No recent critical incidents</string>
+    <string name="activity_sub_none">Mesh heartbeats operating normally</string>
+    <string name="activity_time_recent">Just now</string>
+    <string name="activity_view_all">View History</string>
+
+    <!-- Group Meeting Point -->
+    <string name="meeting_point_title">Group Meeting Spot</string>
+    <string name="meeting_point_name">Camp Alpha (Lake Bridge)</string>
+    <string name="meeting_point_guidance">140m • 45° NE • Straight-line</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_messages">SOS</string>
+    <string name="nav_devices">Devices</string>
+    <string name="nav_inbox">Inbox</string>
+    <string name="nav_settings">Settings</string>
+</resources>

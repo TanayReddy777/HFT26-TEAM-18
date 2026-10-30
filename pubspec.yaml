@@ -1,0 +1,51 @@
+name: resq
+description: "ResQ - Offline Emergency Messaging & Safety Mesh System for Android and Cross-Platform Devices"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Offline Mesh & Local Connectivity
+  flutter_nearby_connections: ^1.1.2
+  flutter_blue_plus: ^1.32.10
+
+  # Storage & Offline Persistence
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  shared_preferences: ^2.2.3
+
+  # Sensors & Location
+  geolocator: ^11.0.0
+  sensors_plus: ^5.0.1
+  battery_plus: ^5.0.3
+
+  # Offline ML & Language Processing
+  google_mlkit_translation: ^0.10.0
+  google_mlkit_language_id: ^0.10.0
+
+  # Crypto, Utilities & Security
+  crypto: ^3.0.3
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  flutter_secure_storage: ^9.0.0
+
+  # Notifications & Background
+  flutter_local_notifications: ^17.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  test: ^1.24.9
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/zones/
+    - assets/models/
