@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261031_03">
+  <link rel="stylesheet" href="style.css?v=20261031_04">
 </head>
 <body>
 
@@ -43,6 +43,19 @@
             <span class="status-icon" title="Cellular Offline">📶</span>
             <span class="status-icon" id="status-battery-icon">🔋 85%</span>
           </div>
+        </div>
+
+        <!-- Phone Identity & Live Mesh Peer Sync Bar -->
+        <div class="device-identity-bar">
+          <div class="identity-left">
+            <span class="identity-label">DEVICE:</span>
+            <select class="identity-select" id="device-identity-select" onchange="changeDeviceIdentity(this.value)">
+              <option value="Phone 1 (Tanay)">📱 Phone 1 (Tanay)</option>
+              <option value="Phone 2 (Ravi)">🛡️ Phone 2 (Ravi - Buddy)</option>
+              <option value="Phone 3 (Anil)">📡 Phone 3 (Anil - Relay)</option>
+            </select>
+          </div>
+          <button class="btn-enable-sensors" id="btn-sensors-sound" onclick="enableSensorsAndAudio()">🔊 Enable Alarm/Sensors</button>
         </div>
 
         <!-- App Brand Dynamic Header -->
@@ -499,6 +512,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261031_03"></script>
+  <script src="app.js?v=20261031_04"></script>
 </body>
 </html>

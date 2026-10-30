@@ -38,7 +38,7 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -47,19 +47,62 @@
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme" />
+        </activity>
+
+        <!-- Screen 1: Splash Screen (Launcher) -->
+        <activity
+            android:name=".ui.splash.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ResQ"
+            android:screenOrientation="portrait">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- ResQ Native Java Material 3 Home Dashboard Activity -->
+        <!-- Screen 2: Onboarding Screen -->
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ResQ"
+            android:screenOrientation="portrait" />
+
+        <!-- Screen 3: Home Dashboard Activity -->
         <activity
             android:name=".ui.home.HomeActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.ResQ"
             android:screenOrientation="portrait"
             android:label="@string/app_name" />
+
+        <!-- Screen 4: Emergency Message Activity -->
+        <activity
+            android:name=".ui.message.EmergencyMessageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ResQ"
+            android:screenOrientation="portrait" />
+
+        <!-- Screen 5: Nearby Devices Activity -->
+        <activity
+            android:name=".ui.devices.NearbyDevicesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ResQ"
+            android:screenOrientation="portrait" />
+
+        <!-- Screen 6: Inbox Activity -->
+        <activity
+            android:name=".ui.inbox.InboxActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ResQ"
+            android:screenOrientation="portrait" />
+
+        <!-- Screen 7: Settings Activity -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ResQ"
+            android:screenOrientation="portrait" />
 
         <!-- Ongoing ResQ Mesh & Safety Foreground Service -->
         <service

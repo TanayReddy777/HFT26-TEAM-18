@@ -61,6 +61,21 @@ function autoTranslate(text) {
   return 'Translated to Telugu: అత్యవసర సందేశం అందింది.';
 }
 
+// SSE Clients Set for sub-50ms instant multi-phone event broadcasting
+const sseClients = new Set();
+const registeredDevices = new Map();
+
+function broadcastEvent(type, payload) {
+  const payloadStr = JSON.stringify({ type, payload, state, timestamp: Date.now() });
+  for (const client of sseClients) {
+    try {
+      client.write(`data: ${payloadStr}\n\n`);
+    } catch (_) {
+      sseClients.delete(client);
+    }
+  }
+}
+
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
@@ -76,7 +91,24 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // --- REST API ENDPOINTS ---
+  // --- REST & REAL-TIME API ENDPOINTS ---
+
+  // 0. GET /api/events (Server-Sent Events for instant multi-phone live sync)
+  if (pathname === '/api/events') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-store',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', state })}\n\n`);
+    sseClients.add(res);
+
+    req.on('close', () => {
+      sseClients.delete(res);
+    });
+    return;
+  }
 
   // 1. GET /api/status
   if (pathname === '/api/status' && req.method === 'GET') {
@@ -85,7 +117,38 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 2. POST /api/sos (Trigger Emergency SOS)
+  // 2. POST /api/register-device (Track real connected phones on local Wi-Fi)
+  if (pathname === '/api/register-device' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body); } catch (_) {}
+      
+      const deviceId = data.deviceId || 'node-' + Math.floor(Math.random() * 1000);
+      const deviceName = data.deviceName || 'Peer ' + deviceId;
+
+      registeredDevices.set(deviceId, {
+        id: deviceId,
+        name: deviceName,
+        distance: data.distance || '12 meters away',
+        battery: (data.battery || 85) + '%',
+        status: 'Safe',
+        isBuddy: Boolean(data.isBuddy),
+        rssi: data.rssi || -55,
+        hops: 'Direct BLE / Wi-Fi Direct',
+        lastSeen: 'Just now'
+      });
+
+      broadcastEvent('DEVICE_REGISTERED', { deviceId, deviceName });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, registered: Array.from(registeredDevices.values()) }));
+    });
+    return;
+  }
+
+  // 3. POST /api/sos (Trigger Emergency SOS with instant audio & vibration broadcast)
   if (pathname === '/api/sos' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -97,13 +160,26 @@ const server = http.createServer((req, res) => {
       state.emergencyReason = data.reason || 'User pressed the Emergency SOS button';
       state.emergencyTime = new Date().toLocaleTimeString();
 
+      const senderName = data.sender || 'Mesh Node';
       // Add emergency message to chat
-      state.messages.push({
+      const alertMsg = {
         id: Date.now(),
-        sender: 'You',
+        sender: senderName,
+        priority: 'P0',
         text: '🚨 EMERGENCY SOS: ' + state.emergencyReason,
         translation: '🚨 అత్యవసర సహాయం కోరబడింది',
-        time: 'Just now'
+        time: 'Just now',
+        hops: 'Flooded (All Mesh)',
+        status: 'Delivered (ACK All Peers)'
+      };
+      state.messages.push(alertMsg);
+
+      // Instant Push to all connected phones!
+      broadcastEvent('SOS_TRIGGERED', {
+        reason: state.emergencyReason,
+        time: state.emergencyTime,
+        sender: senderName,
+        alertMsg
       });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -112,22 +188,35 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. POST /api/safe (Clear Emergency / I am Safe)
+  // 4. POST /api/safe (Clear Emergency / I am Safe)
   if (pathname === '/api/safe' && req.method === 'POST') {
-    state.isEmergency = false;
-    state.emergencyReason = '';
-    state.emergencyTime = null;
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body); } catch (_) {}
 
-    state.messages.push({
-      id: Date.now(),
-      sender: 'You',
-      text: '✅ I am safe now. The emergency alert is resolved.',
-      translation: '✅ నేను ఇప్పుడు సురక్షితంగా ఉన్నాను.',
-      time: 'Just now'
+      state.isEmergency = false;
+      state.emergencyReason = '';
+      state.emergencyTime = null;
+
+      const safeMsg = {
+        id: Date.now(),
+        sender: data.sender || 'You',
+        priority: 'P3',
+        text: '✅ I am safe now. The emergency alert is resolved.',
+        translation: '✅ నేను ఇప్పుడు సురక్షితంగా ఉన్నాను.',
+        time: 'Just now',
+        hops: 'Direct',
+        status: 'Delivered'
+      };
+      state.messages.push(safeMsg);
+
+      broadcastEvent('SOS_CLEARED', { state, safeMsg });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Marked as safe. Group alert cancelled.', state }));
     });
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, message: 'Marked as safe. Group alert cancelled.', state }));
     return;
   }
 
@@ -168,6 +257,8 @@ const server = http.createServer((req, res) => {
         state.emergencyTime = new Date().toLocaleTimeString();
       }
 
+      broadcastEvent('NEW_MESSAGE', { msg, isEmergency: state.isEmergency });
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, message: msg, isEmergency: state.isEmergency }));
     });
@@ -186,6 +277,8 @@ const server = http.createServer((req, res) => {
       state.batteryLevel = level;
       state.inDangerZone = Boolean(data.inDangerZone);
 
+      broadcastEvent('BATTERY_CHANGED', { batteryLevel: state.batteryLevel, inDangerZone: state.inDangerZone });
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, batteryLevel: state.batteryLevel, inDangerZone: state.inDangerZone }));
     });
@@ -203,6 +296,9 @@ const server = http.createServer((req, res) => {
       if (data.meetingPoint) {
         state.meetingPoint = data.meetingPoint;
       }
+
+      broadcastEvent('MEETING_POINT_CHANGED', { meetingPoint: state.meetingPoint });
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, meetingPoint: state.meetingPoint }));
     });

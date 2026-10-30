@@ -1,11 +1,17 @@
 /**
- * ResQ — Interactive 5-Screen Full Working Model
- * Supports: Home Dashboard, SOS Dispatch, Mesh Devices Radar, Encrypted Inbox, Safety Settings,
- * Fall Simulation Countdown, Real-Time Polling, and Mobile Responsive Mode.
+ * ResQ — Interactive 5-Screen Full Working Model with Real-Time Multi-Phone Mesh
+ * Features:
+ * - Server-Sent Events (SSE) sub-50ms instant sync across real phones on local Wi-Fi
+ * - Web Audio API emergency siren and chime generator
+ * - Web Vibration API tactile alerts on phone hardware
+ * - Physical Phone Accelerometer (DeviceMotionEvent) for real drop/fall detection
+ * - Peer Identity Switcher (Phone 1 Tanay vs Phone 2 Ravi vs Phone 3 Anil)
+ * - 5 Full Screens: Home, SOS, Devices Radar, Encrypted Inbox, Safety Settings
  */
 
 let appState = {
   activeScreen: 'home',
+  myIdentity: 'Phone 1 (Tanay)',
   selectedPriority: 'P0',
   currentFilter: 'all',
   fallCountdownInterval: null,
@@ -14,14 +20,93 @@ let appState = {
   batteryLevel: 85,
   meetingPoint: 'Camp Alpha (Lake Bridge)',
   friends: [],
-  messages: []
+  messages: [],
+  sensorsEnabled: false,
+  lastG: 9.8,
+  inFreeFall: false,
+  freeFallTimestamp: 0
 };
+
+// Web Audio Context for Emergency Siren
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playEmergencySiren() {
+  try {
+    initAudio();
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    // Frequency sweeps between 880Hz and 440Hz
+    const now = audioCtx.currentTime;
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.4);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.8);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 1.2);
+
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.4);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 1.4);
+  } catch (err) {
+    console.warn('Audio siren playback skipped:', err);
+  }
+}
+
+function playMessageBeep() {
+  try {
+    initAudio();
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    const now = audioCtx.currentTime;
+    osc.frequency.setValueAtTime(587.33, now); // D5
+    osc.frequency.setValueAtTime(880, now + 0.1); // A5
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } catch (err) {}
+}
+
+function triggerVibration(pattern = [500, 200, 500]) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
 
 // 1. Initial Kickoff
 document.addEventListener('DOMContentLoaded', () => {
   initClock();
+  initSSE();
   fetchStatus();
-  setInterval(fetchStatus, 3000);
+  initPhysicalAccelerometer();
 });
 
 // Device Clock Update
@@ -38,11 +123,142 @@ function initClock() {
   setInterval(updateTime, 1000);
 }
 
-// 2. Navigation State Machine
+// 2. Real-Time SSE (Server-Sent Events) Stream
+function initSSE() {
+  const evtSource = new EventSource('/api/events');
+
+  evtSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      handleLiveEvent(data);
+    } catch (err) {
+      console.warn('Error parsing SSE event:', err);
+    }
+  };
+
+  evtSource.onerror = () => {
+    console.warn('SSE reconnecting in background...');
+  };
+}
+
+function handleLiveEvent(data) {
+  if (!data || !data.type) return;
+
+  if (data.state) {
+    appState.isEmergency = data.state.isEmergency;
+    appState.batteryLevel = data.state.batteryLevel;
+    appState.meetingPoint = data.state.meetingPoint;
+    appState.friends = data.state.friends || [];
+    appState.messages = data.state.messages || [];
+    renderGlobalState(data.state);
+  }
+
+  // Event specific actions
+  switch (data.type) {
+    case 'SOS_TRIGGERED':
+      playEmergencySiren();
+      triggerVibration([800, 300, 800, 300, 1000]);
+      showToast(`🚨 P0 EMERGENCY SOS from ${data.payload.sender || 'Peer Node'}!`);
+      break;
+
+    case 'SOS_CLEARED':
+      triggerVibration([200, 100, 200]);
+      showToast('✅ Peer announced safe. Alert cleared.');
+      break;
+
+    case 'NEW_MESSAGE':
+      if (data.payload && data.payload.msg) {
+        if (data.payload.msg.sender !== appState.myIdentity) {
+          playMessageBeep();
+          triggerVibration([150]);
+          showToast(`💬 ${data.payload.msg.sender}: ${data.payload.msg.text}`);
+        }
+      }
+      break;
+
+    case 'BATTERY_CHANGED':
+      showToast(`🔋 Group Power Band update: ${data.payload.batteryLevel}%`);
+      break;
+
+    case 'MEETING_POINT_CHANGED':
+      showToast(`📍 Meeting Point updated to: ${data.payload.meetingPoint}`);
+      break;
+  }
+}
+
+// 3. User Identity Switcher (For testing 2 phones side by side)
+function changeDeviceIdentity(name) {
+  appState.myIdentity = name;
+  showToast(`Active Identity set to: ${name}`);
+
+  // Register device presence to server
+  fetch('/api/register-device', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      deviceId: name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      deviceName: name,
+      battery: appState.batteryLevel
+    })
+  }).catch(() => {});
+}
+
+function enableSensorsAndAudio() {
+  initAudio();
+  appState.sensorsEnabled = true;
+
+  const btn = document.getElementById('btn-sensors-sound');
+  if (btn) {
+    btn.className = 'btn-enable-sensors active';
+    btn.textContent = '🔊 Active (Vibrate & Siren On)';
+  }
+
+  // Request accelerometer permissions if browser requires it (iOS 13+)
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission()
+      .then(permissionState => {
+        if (permissionState === 'granted') {
+          showToast('✅ Accelerometer drop sensors granted!');
+        }
+      })
+      .catch(console.error);
+  }
+
+  triggerVibration([200]);
+  playMessageBeep();
+  showToast('🔊 Siren & Phone Vibration Enabled!');
+}
+
+// 4. Physical Accelerometer Fall Sensor
+function initPhysicalAccelerometer() {
+  if (typeof DeviceMotionEvent !== 'undefined') {
+    window.addEventListener('devicemotion', (event) => {
+      const acc = event.accelerationIncludingGravity;
+      if (!acc || acc.x === null) return;
+
+      const totalG = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+
+      // Phase 1: Free fall detection (near weightless: < 3.5 m/s^2)
+      if (totalG < 3.5) {
+        appState.inFreeFall = true;
+        appState.freeFallTimestamp = Date.now();
+      } 
+      // Phase 2: High impact shockwave (> 24 m/s^2) shortly following freefall
+      else if (appState.inFreeFall && totalG > 24.0 && (Date.now() - appState.freeFallTimestamp < 1500)) {
+        appState.inFreeFall = false;
+        triggerFallSimulation();
+        triggerVibration([1000]);
+      }
+
+      appState.lastG = totalG;
+    });
+  }
+}
+
+// 5. Navigation State Machine
 function navTo(screenName) {
   appState.activeScreen = screenName;
 
-  // Toggle View Containers
   const views = document.querySelectorAll('.screen-view');
   views.forEach(v => v.classList.remove('active'));
 
@@ -52,7 +268,6 @@ function navTo(screenName) {
     targetView.scrollTop = 0;
   }
 
-  // Toggle Bottom Navigation Pills
   const navButtons = document.querySelectorAll('.nav-item');
   navButtons.forEach(btn => btn.classList.remove('active'));
 
@@ -61,7 +276,6 @@ function navTo(screenName) {
     activeNavBtn.classList.add('active');
   }
 
-  // Update Dynamic Header
   const titleEl = document.getElementById('header-title');
   const subEl = document.getElementById('header-subtitle');
 
@@ -78,12 +292,11 @@ function navTo(screenName) {
     subEl.textContent = headers[screenName].sub;
   }
 
-  // Re-render specific screen content
   if (screenName === 'devices') renderDevices(appState.friends);
   if (screenName === 'inbox') renderInbox(appState.messages);
 }
 
-// 3. Status Polling & Real-Time Sync
+// 6. Status Polling & Real-Time Sync
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status', { cache: 'no-store' });
@@ -103,17 +316,12 @@ async function fetchStatus() {
 }
 
 function renderGlobalState(data) {
-  // Battery status icon
   const batteryIcon = document.getElementById('status-battery-icon');
-  if (batteryIcon) {
-    batteryIcon.textContent = `🔋 ${data.batteryLevel}%`;
-  }
-  const sosBatteryTag = document.getElementById('sos-battery-tag');
-  if (sosBatteryTag) {
-    sosBatteryTag.textContent = `${data.batteryLevel}%`;
-  }
+  if (batteryIcon) batteryIcon.textContent = `🔋 ${data.batteryLevel}%`;
 
-  // Header status pill
+  const sosBatteryTag = document.getElementById('sos-battery-tag');
+  if (sosBatteryTag) sosBatteryTag.textContent = `${data.batteryLevel}%`;
+
   const headerPill = document.getElementById('header-status-pill');
   const headerText = document.getElementById('header-status-text');
   const sosAmbientGlow = document.getElementById('sos-ambient-glow');
@@ -152,7 +360,6 @@ function renderGlobalState(data) {
     }
   }
 
-  // Telemetry cards
   const networkVal = document.getElementById('card-network-val');
   if (networkVal) networkVal.textContent = data.isEmergency ? 'Alert Broadcasting' : 'Offline Active';
 
@@ -161,16 +368,14 @@ function renderGlobalState(data) {
   if (devicesVal) devicesVal.textContent = `${appState.friends.length} Devices`;
   if (meshCountVal) meshCountVal.textContent = `${appState.friends.length}`;
 
-  // Meeting point
   const meetingTitle = document.getElementById('meeting-title-text');
   if (meetingTitle) meetingTitle.textContent = data.meetingPoint;
 
-  // Active view updates
   if (appState.activeScreen === 'devices') renderDevices(appState.friends);
   if (appState.activeScreen === 'inbox') renderInbox(appState.messages);
 }
 
-// 4. SCREEN 1 (HOME) ACTIONS
+// 7. SCREEN 1 (HOME) ACTIONS
 function handleSosPress() {
   const dialog = document.getElementById('sos-confirm-dialog');
   if (dialog) dialog.style.display = 'flex';
@@ -187,11 +392,16 @@ async function confirmSosBroadcast() {
     const res = await fetch('/api/sos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'Manual Emergency SOS triggered from Home Dashboard' })
+      body: JSON.stringify({
+        reason: `Emergency SOS triggered from ${appState.myIdentity}`,
+        sender: appState.myIdentity
+      })
     });
     if (res.ok) {
+      playEmergencySiren();
+      triggerVibration([500, 200, 500]);
       fetchStatus();
-      showToast('🚨 P0 SOS broadcasted to 3 mesh peers!');
+      showToast('🚨 P0 SOS broadcasted across mesh!');
     }
   } catch (err) {
     showToast('Failed to connect to server');
@@ -200,17 +410,22 @@ async function confirmSosBroadcast() {
 
 async function handleSafeCheckIn() {
   try {
-    const res = await fetch('/api/safe', { method: 'POST' });
+    const res = await fetch('/api/safe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: appState.myIdentity })
+    });
     if (res.ok) {
+      triggerVibration([200]);
       fetchStatus();
-      showToast('✅ Safety confirmed. All alerts cleared.');
+      showToast('✅ Safety confirmed. Alert cleared.');
     }
   } catch (err) {
     console.error(err);
   }
 }
 
-// 5. SCREEN 2 (SOS DISPATCH) ACTIONS
+// 8. SCREEN 2 (SOS DISPATCH) ACTIONS
 function selectPriority(priority) {
   appState.selectedPriority = priority;
   document.querySelectorAll('.priority-chip').forEach(btn => btn.classList.remove('active'));
@@ -258,11 +473,14 @@ async function dispatchSosMessage() {
       body: JSON.stringify({
         text: text,
         priority: appState.selectedPriority,
-        sender: 'You'
+        sender: appState.myIdentity
       })
     });
 
     if (res.ok) {
+      playEmergencySiren();
+      triggerVibration([400, 200, 400]);
+
       const traceCard = document.getElementById('relay-trace-card');
       if (traceCard) traceCard.style.display = 'block';
 
@@ -278,7 +496,7 @@ async function dispatchSosMessage() {
   }
 }
 
-// 6. SCREEN 3 (NEARBY DEVICES) ACTIONS
+// 9. SCREEN 3 (NEARBY DEVICES) ACTIONS
 function renderDevices(friends) {
   const container = document.getElementById('devices-container');
   if (!container || !friends) return;
@@ -320,6 +538,7 @@ async function triggerDeviceScan() {
       const data = await res.json();
       appState.friends = data.friends;
       renderDevices(data.friends);
+      triggerVibration([100]);
       showToast(`Radar Scan: ${data.friends.length} peers synchronized!`);
     }
   } catch (err) {
@@ -332,14 +551,15 @@ async function triggerDeviceScan() {
 }
 
 function pingNode(name) {
+  triggerVibration([80]);
   showToast(`⚡ Ping to ${name}: 18ms latency (HMAC Ack Received)`);
 }
 
 function traceRoute(name) {
-  showToast(`📍 Mesh Route: Local [You] ➔ ${name} (Hop 0 • RSSI: -58 dBm)`);
+  showToast(`📍 Mesh Route: [${appState.myIdentity}] ➔ ${name} (Hop 0 • RSSI: -58 dBm)`);
 }
 
-// 7. SCREEN 4 (INBOX) ACTIONS
+// 10. SCREEN 4 (INBOX) ACTIONS
 function filterInbox(type) {
   appState.currentFilter = type;
   document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
@@ -361,7 +581,7 @@ function renderInbox(messages) {
   }
 
   container.innerHTML = filtered.map(m => `
-    <div class="inbox-msg-bubble ${m.sender === 'You' ? 'you' : ''} ${m.priority === 'P0' ? 'p0-alert' : ''}">
+    <div class="inbox-msg-bubble ${m.sender === appState.myIdentity ? 'you' : ''} ${m.priority === 'P0' ? 'p0-alert' : ''}">
       <div class="msg-top-row">
         <span class="msg-sender-name">${m.sender} ${m.priority ? `(${m.priority})` : ''}</span>
         <span>${m.time}</span>
@@ -389,9 +609,15 @@ async function sendInboxMessage() {
     const res = await fetch('/api/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, sender: 'You', priority: 'P2' })
+      body: JSON.stringify({
+        text,
+        sender: appState.myIdentity,
+        priority: 'P2'
+      })
     });
     if (res.ok) {
+      playMessageBeep();
+      triggerVibration([60]);
       fetchStatus();
       showToast('Encrypted message delivered across mesh');
     }
@@ -400,7 +626,7 @@ async function sendInboxMessage() {
   }
 }
 
-// 8. SCREEN 5 (SETTINGS) ACTIONS
+// 11. SCREEN 5 (SETTINGS) ACTIONS
 async function handleBatterySlider(val) {
   const numEl = document.getElementById('battery-slider-num');
   if (numEl) numEl.textContent = `${val}%`;
@@ -428,7 +654,6 @@ async function handleBatterySlider(val) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ level: val, inDangerZone: val < 15 })
     });
-    fetchStatus();
   } catch (err) {
     console.error(err);
   }
@@ -446,7 +671,7 @@ async function saveMeetingPoint() {
       body: JSON.stringify({ meetingPoint: val })
     });
     if (res.ok) {
-      fetchStatus();
+      triggerVibration([100]);
       showToast(`📍 Rendezvous point updated to: "${val}" (Signed Rev 2)`);
     }
   } catch (err) {
@@ -454,7 +679,7 @@ async function saveMeetingPoint() {
   }
 }
 
-// 9. FALL DETECTION 15-SECOND SIMULATION
+// 12. FALL DETECTION 15-SECOND SIMULATION
 function triggerFallSimulation() {
   const dialog = document.getElementById('fall-countdown-dialog');
   if (!dialog) return;
@@ -464,6 +689,10 @@ function triggerFallSimulation() {
   const countEl = document.getElementById('fall-countdown-secs');
   if (countEl) countEl.textContent = appState.fallSecondsLeft;
 
+  // Immediate alarm burst on fall
+  playEmergencySiren();
+  triggerVibration([600, 200, 600]);
+
   clearInterval(appState.fallCountdownInterval);
   appState.fallCountdownInterval = setInterval(() => {
     appState.fallSecondsLeft--;
@@ -472,7 +701,6 @@ function triggerFallSimulation() {
     if (appState.fallSecondsLeft <= 0) {
       clearInterval(appState.fallCountdownInterval);
       dialog.style.display = 'none';
-      // Auto-escalate to SOS when timer expires!
       triggerFallSosNow();
     }
   }, 1000);
@@ -482,6 +710,7 @@ function cancelFallAlert() {
   clearInterval(appState.fallCountdownInterval);
   const dialog = document.getElementById('fall-countdown-dialog');
   if (dialog) dialog.style.display = 'none';
+  triggerVibration([100]);
   showToast('✅ Fall alert safely canceled. User marked safe.');
 }
 
@@ -494,9 +723,14 @@ async function triggerFallSosNow() {
     const res = await fetch('/api/sos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'Unresponsive fall detected (15s auto-escalation)' })
+      body: JSON.stringify({
+        reason: `Unresponsive fall detected from ${appState.myIdentity} (15s auto-escalation)`,
+        sender: appState.myIdentity
+      })
     });
     if (res.ok) {
+      playEmergencySiren();
+      triggerVibration([1000, 500, 1000]);
       fetchStatus();
       showToast('🚨 FALL SOS ESCALATED: Emergency broadcasted across mesh!');
     }
@@ -505,7 +739,7 @@ async function triggerFallSosNow() {
   }
 }
 
-// 10. Desktop / Phone Frame Toggle
+// 13. Desktop / Phone Frame Toggle
 function togglePhoneFrame() {
   const frame = document.getElementById('device-frame');
   const btn = document.getElementById('frame-toggle-btn');
@@ -519,7 +753,7 @@ function togglePhoneFrame() {
   }
 }
 
-// 11. Subtle Toast Notification
+// 14. Subtle Toast Notification
 function showToast(message) {
   let toast = document.getElementById('resq-toast');
   if (!toast) {

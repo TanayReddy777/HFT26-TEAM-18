@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ResQ Android Material 3 Emergency Message Screen -->
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_navy_deep">
+
+    <!-- Top App Bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:background="@color/bg_navy_deep"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_arrow_forward"
+            android:rotation="180"
+            app:tint="@color/text_white"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Emergency Dispatch"
+            android:textColor="@color/text_white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp" />
+    </LinearLayout>
+
+    <!-- Scrollable Content -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Section: Priority Level -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PRIORITY CLASSIFICATION"
+                android:textColor="@color/text_slate_muted"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="3"
+                android:layout_marginBottom="18dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPriorityP0"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="P0 Critical"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_white"
+                    app:backgroundTint="@color/sos_red"
+                    app:cornerRadius="10dp"
+                    android:layout_marginEnd="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPriorityP1"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="P1 Urgent"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_slate_muted"
+                    app:backgroundTint="@color/bg_card_slate"
+                    app:strokeColor="@color/border_card"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="10dp"
+                    android:layout_marginHorizontal="2dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPriorityP2"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="P2 Warning"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_slate_muted"
+                    app:backgroundTint="@color/bg_card_slate"
+                    app:strokeColor="@color/border_card"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="10dp"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+
+            <!-- Section: Quick Templates -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ONE-TAP EMERGENCY TEMPLATES"
+                android:textColor="@color/text_slate_muted"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
+
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2"
+                android:rowCount="2"
+                android:layout_marginBottom="18dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tmplTrapped"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:backgroundTint="@color/bg_card_slate"
+                    app:strokeColor="@color/border_card"
+                    app:strokeWidth="1dp"
+                    app:cardCornerRadius="12dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🚨 Trapped under debris, need extrication"
+                        android:textColor="@color/text_slate_light"
+                        android:textSize="11sp"
+                        android:padding="10dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tmplInjury"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:backgroundTint="@color/bg_card_slate"
+                    app:strokeColor="@color/border_card"
+                    app:strokeWidth="1dp"
+                    app:cardCornerRadius="12dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🩸 Severe bleeding, need medical first aid"
+                        android:textColor="@color/text_slate_light"
+                        android:textSize="11sp"
+                        android:padding="10dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tmplSeparated"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:backgroundTint="@color/bg_card_slate"
+                    app:strokeColor="@color/border_card"
+                    app:strokeWidth="1dp"
+                    app:cardCornerRadius="12dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="⚠️ Separated from team, low battery (<10%)"
+                        android:textColor="@color/text_slate_light"
+                        android:textSize="11sp"
+                        android:padding="10dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/tmplFlood"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:backgroundTint="@color/bg_card_slate"
+                    app:strokeColor="@color/border_card"
+                    app:strokeWidth="1dp"
+                    app:cardCornerRadius="12dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🌊 Rising water / flash flood warning"
+                        android:textColor="@color/text_slate_light"
+                        android:textSize="11sp"
+                        android:padding="10dp" />
+                </com.google.android.material.card.MaterialCardView>
+            </GridLayout>
+
+            <!-- Section: Message Input -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="INCIDENT MESSAGE (MAX 140 BYTES)"
+                android:textColor="@color/text_slate_muted"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/bg_surface_dark"
+                app:strokeColor="@color/border_card"
+                app:strokeWidth="1dp"
+                app:cardCornerRadius="14dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <EditText
+                        android:id="@+id/etMessage"
+                        android:layout_width="match_parent"
+                        android:layout_height="90dp"
+                        android:gravity="top|start"
+                        android:background="@null"
+                        android:hint="Describe exact emergency details..."
+                        android:textColorHint="@color/text_slate_muted"
+                        android:textColor="@color/text_white"
+                        android:textSize="14sp"
+                        android:maxLength="140" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:justifyContent="space-between"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:id="@+id/tvByteCounter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 / 140 bytes"
+                            android:textColor="@color/text_slate_muted"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="GZIP + HMAC-SHA256"
+                            android:textColor="@color/cyan_accent"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Auto Attached Telemetry Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/bg_card_slate"
+                app:strokeColor="@color/border_card"
+                app:strokeWidth="1dp"
+                app:cardCornerRadius="14dp"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📡 Auto-Attached Telemetry"
+                        android:textColor="@color/cyan_accent"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="6dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📍 GPS: 17.4435° N, 78.3489° E (±4.2m) • Battery: 85% • TTL: 3 Hops"
+                        android:textColor="@color/text_slate_muted"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Primary Transmit Action -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBroadcastSos"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="🚨 TRANSMIT TO MESH (ALL PEERS)"
+                android:textColor="@color/text_white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/sos_red"
+                app:cornerRadius="14dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Material 3 Bottom Navigation Bar -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/bg_surface_dark"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="@color/cyan_accent"
+        app:itemTextColor="@color/text_slate_light"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

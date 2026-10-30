@@ -148,16 +148,16 @@ public class HomeActivity extends AppCompatActivity {
                 if (itemId == R.id.action_home) {
                     return true;
                 } else if (itemId == R.id.action_sos_message) {
-                    Toast.makeText(HomeActivity.this, "Emergency Message Screen (Screen 4)", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(HomeActivity.this, com.resq.app.ui.message.EmergencyMessageActivity.class));
                     return true;
                 } else if (itemId == R.id.action_devices) {
-                    Toast.makeText(HomeActivity.this, "Nearby Devices Screen (Screen 5)", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(HomeActivity.this, com.resq.app.ui.devices.NearbyDevicesActivity.class));
                     return true;
                 } else if (itemId == R.id.action_inbox) {
-                    Toast.makeText(HomeActivity.this, "Emergency Inbox Screen (Screen 6)", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(HomeActivity.this, com.resq.app.ui.inbox.InboxActivity.class));
                     return true;
                 } else if (itemId == R.id.action_settings) {
-                    Toast.makeText(HomeActivity.this, "Settings Screen (Screen 7)", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(HomeActivity.this, com.resq.app.ui.settings.SettingsActivity.class));
                     return true;
                 }
                 return false;
