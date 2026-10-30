@@ -6,11 +6,18 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
+  <meta name="theme-color" content="#0A0F1D">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ResQ">
   <title>ResQ — Offline Emergency Safety System</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261031_04">
+  <link rel="stylesheet" href="style.css?v=20261031_05">
 </head>
 <body>
 
@@ -79,6 +86,18 @@
             <span id="header-status-text">Mesh Active</span>
           </div>
         </header>
+
+        <!-- PWA Install Banner -->
+        <div class="pwa-install-banner" id="pwa-install-banner">
+          <div class="pwa-install-left">
+            <span class="pwa-icon">📲</span>
+            <div>
+              <div class="pwa-title">Install ResQ App</div>
+              <div class="pwa-sub">Add to phone home screen (Works 100% offline)</div>
+            </div>
+          </div>
+          <button class="btn-install-pwa" id="btn-pwa-install" onclick="installPWA()">Install App</button>
+        </div>
 
         <!-- SCREEN 1: HOME DASHBOARD -->
         <div id="view-home" class="screen-view active">
@@ -236,7 +255,7 @@
           <div class="m3-card telemetry-attach-card">
             <div class="attach-title">📡 Auto-Attached Telemetry</div>
             <div class="attach-grid">
-              <div class="attach-item">📍 GPS: 17.4435° N, 78.3489° E (±4m)</div>
+              <div class="attach-item" id="sos-gps-tag">📍 GPS: Live Coordinates (Acquiring...)</div>
               <div class="attach-item">🔋 Battery: <span id="sos-battery-tag">85%</span></div>
               <div class="attach-item">🔄 TTL Budget: 3 Mesh Hops</div>
               <div class="attach-item">🛡️ Recipient: Flood to All Nodes</div>

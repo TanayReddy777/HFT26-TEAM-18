@@ -1,0 +1,24 @@
+{
+  "name": "ResQ — Offline Emergency Messaging & Safety",
+  "short_name": "ResQ",
+  "description": "Production-grade decentralized offline emergency safety mesh network",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0F1D",
+  "theme_color": "#0A0F1D",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
