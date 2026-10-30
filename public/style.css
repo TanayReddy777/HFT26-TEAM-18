@@ -269,6 +269,56 @@ body {
   border-bottom: 1px solid rgba(51, 65, 85, 0.4);
 }
 
+/* PWA Install Banner */
+.pwa-install-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.9));
+  border-bottom: 1px solid rgba(6, 182, 212, 0.35);
+  animation: slideDown 0.3s ease;
+}
+
+.pwa-install-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pwa-icon {
+  font-size: 20px;
+}
+
+.pwa-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-white);
+}
+
+.pwa-sub {
+  font-size: 10px;
+  color: var(--cyan-accent);
+}
+
+.btn-install-pwa {
+  background: var(--cyan-accent);
+  color: #000000;
+  border: none;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-install-pwa:hover {
+  filter: brightness(1.15);
+  transform: scale(1.03);
+}
+
 .brand-left {
   display: flex;
   align-items: center;
