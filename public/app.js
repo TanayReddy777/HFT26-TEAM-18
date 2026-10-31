@@ -19,6 +19,9 @@ let appState = {
   fallCountdownInterval: null,
   fallSecondsLeft: 15,
   isEmergency: false,
+  emergencyOriginator: null,
+  emergencyRevision: 0,
+  emergencyAcks: [],
   batteryLevel: 85,
   meetingPoint: 'Camp Alpha (Lake Bridge)',
   friends: [],
@@ -37,6 +40,19 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((reg) => {
       console.log('[ResQ] Offline ServiceWorker active:', reg.scope);
+      if (reg.active) {
+        console.log('[ResQ] Cache ready for offline use');
+      }
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('✅ Offline cache updated! Works without internet.');
+            }
+          });
+        }
+      });
     }).catch((err) => {
       console.warn('[ResQ] ServiceWorker error:', err);
     });
@@ -221,10 +237,14 @@ function handleLiveEvent(data) {
 
   if (data.state) {
     appState.isEmergency = data.state.isEmergency;
+    appState.emergencyOriginator = data.state.emergencyOriginator;
+    appState.emergencyRevision = data.state.emergencyRevision || 0;
+    appState.emergencyAcks = data.state.emergencyAcks || [];
     appState.batteryLevel = data.state.batteryLevel;
     appState.meetingPoint = data.state.meetingPoint;
     appState.friends = data.state.friends || [];
     appState.messages = data.state.messages || [];
+    window.__latestStateData = data.state;
     renderGlobalState(data.state);
   }
 
@@ -232,14 +252,22 @@ function handleLiveEvent(data) {
     case 'SOS_TRIGGERED':
       playEmergencySiren();
       triggerVibration([800, 300, 800, 300, 1000]);
-      speakVoiceAlert(`Emergency SOS alert received from ${data.payload.sender || 'Peer Node'}! Immediate assistance required!`);
-      showToast(`🚨 P0 EMERGENCY SOS from ${data.payload.sender || 'Peer Node'}!`);
+      const orig = data.payload.originator || data.payload.sender || 'Mesh Peer';
+      speakVoiceAlert(`Emergency SOS alert received from ${orig}! Sole resolution authority rests with ${orig}.`);
+      showToast(`🚨 P0 SOS from ${orig} (Rev ${data.payload.revision || 1})`);
+      break;
+
+    case 'SOS_ACKNOWLEDGED':
+      playMessageBeep();
+      triggerVibration([100]);
+      showToast(`🤝 ${data.payload.device} acknowledged SOS (${data.payload.acksCount}/10 Nodes)`);
       break;
 
     case 'SOS_CLEARED':
       triggerVibration([200, 100, 200]);
-      speakVoiceAlert('Emergency resolved. All peers safe.');
-      showToast('✅ Peer announced safe. Alert cleared.');
+      const resBy = data.payload.resolvedBy || 'Originator';
+      speakVoiceAlert(`Emergency verified and resolved by originator ${resBy}. All 10 mesh nodes safe.`);
+      showToast(`✅ Originator ${resBy} verified issue resolved.`);
       break;
 
     case 'NEW_MESSAGE':
@@ -266,6 +294,10 @@ function handleLiveEvent(data) {
 function changeDeviceIdentity(name) {
   appState.myIdentity = name;
   showToast(`Active Identity set to: ${name}`);
+
+  if (window.__latestStateData) {
+    renderGlobalState(window.__latestStateData);
+  }
 
   fetch('/api/register-device', {
     method: 'POST',
@@ -391,6 +423,11 @@ async function fetchStatus() {
 }
 
 function renderGlobalState(data) {
+  window.__latestStateData = data;
+  if (data.emergencyOriginator !== undefined) appState.emergencyOriginator = data.emergencyOriginator;
+  if (data.emergencyRevision !== undefined) appState.emergencyRevision = data.emergencyRevision;
+  if (data.emergencyAcks) appState.emergencyAcks = data.emergencyAcks;
+
   const batteryIcon = document.getElementById('status-battery-icon');
   if (batteryIcon) batteryIcon.textContent = `🔋 ${data.batteryLevel}%`;
 
@@ -406,19 +443,85 @@ function renderGlobalState(data) {
   const activityDetail = document.getElementById('activity-detail-text');
   const activityTime = document.getElementById('activity-time-tag');
 
-  if (data.isEmergency) {
+  const authorityPill = document.getElementById('authority-pill');
+  const revisionTag = document.getElementById('emergency-revision-tag');
+  const explanationBox = document.getElementById('authority-explanation-box');
+  const boxTitle = document.getElementById('authority-box-title');
+  const boxText = document.getElementById('authority-box-text');
+  const btnOriginator = document.getElementById('btn-originator-resolve');
+  const btnRecipientLocked = document.getElementById('btn-recipient-locked');
+  const btnRecipientAck = document.getElementById('btn-recipient-ack');
+  const ackText = document.getElementById('ack-nodes-text');
+  const ackBar = document.getElementById('ack-nodes-bar');
+
+  const isEmergency = Boolean(data.isEmergency);
+  const originator = data.emergencyOriginator || appState.emergencyOriginator || 'Phone 1 (Tanay)';
+  const isOriginator = (appState.myIdentity === originator);
+
+  if (isEmergency) {
     if (headerPill) {
       headerPill.className = 'status-pill-red';
       if (headerText) headerText.textContent = 'SOS Active';
     }
     if (activeEmergencyCard) activeEmergencyCard.style.display = 'block';
-    if (incidentText) incidentText.textContent = data.emergencyReason || 'Critical P0 Emergency broadcast in progress across offline mesh.';
-    if (activityHeadline) activityHeadline.textContent = '🚨 P0 Emergency SOS Active';
-    if (activityDetail) activityDetail.textContent = `Alert broadcasted at ${data.emergencyTime || 'recent'} to all peers`;
+    if (incidentText) incidentText.textContent = data.emergencyReason || `Critical P0 Emergency broadcast from ${originator} across 10-node mesh.`;
+    if (activityHeadline) activityHeadline.textContent = `🚨 P0 SOS: ${originator}`;
+    if (activityDetail) activityDetail.textContent = `Alert broadcasted at ${data.emergencyTime || 'recent'} across 10-node mesh`;
     if (activityTime) activityTime.textContent = 'LIVE ALERT';
     if (sosAmbientGlow) {
       sosAmbientGlow.style.boxShadow = '0 0 65px rgba(239, 68, 68, 0.85)';
       sosAmbientGlow.style.animationDuration = '1.2s';
+    }
+
+    if (revisionTag) revisionTag.textContent = `Rev ${data.emergencyRevision || 1}`;
+
+    const acks = data.emergencyAcks || appState.emergencyAcks || [originator];
+    const ackCount = acks.length;
+    if (ackText) ackText.textContent = `${ackCount} of 10 Nodes Acknowledged`;
+    if (ackBar) ackBar.style.width = `${Math.min(100, Math.max(10, ackCount * 10))}%`;
+
+    if (isOriginator) {
+      // ORIGINATOR HAS EXCLUSIVE AUTHORITY TO VERIFY AND RESOLVE
+      if (authorityPill) {
+        authorityPill.className = 'authority-pill authority-pill-originator';
+        authorityPill.textContent = '👑 ORIGINATOR AUTHORITY';
+      }
+      if (explanationBox) explanationBox.className = 'authority-banner-box originator';
+      if (boxTitle) boxTitle.textContent = '👑 Originator Authority Verified:';
+      if (boxText) boxText.textContent = `You sent this alert. Under the ResQ decentralized safety protocol, only YOU hold the exclusive authority to verify if the issue is resolved and clear this alert across all 10 devices.`;
+
+      if (btnOriginator) btnOriginator.style.display = 'block';
+      if (btnRecipientLocked) btnRecipientLocked.style.display = 'none';
+      if (btnRecipientAck) btnRecipientAck.style.display = 'none';
+    } else {
+      // RECIPIENT MODE - RESOLUTION LOCKED TO ORIGINATOR
+      if (authorityPill) {
+        authorityPill.className = 'authority-pill authority-pill-recipient';
+        authorityPill.textContent = '🛡️ RECIPIENT MODE';
+      }
+      if (explanationBox) explanationBox.className = 'authority-banner-box recipient';
+      if (boxTitle) boxTitle.textContent = `🔒 Resolution Restricted to ${originator}:`;
+      if (boxText) boxText.textContent = `This emergency alert was originated by "${originator}". Recipient devices cannot resolve this incident on behalf of the victim. Only the originator can verify safety and resolve the alert.`;
+
+      if (btnOriginator) btnOriginator.style.display = 'none';
+      if (btnRecipientLocked) {
+        btnRecipientLocked.style.display = 'flex';
+        btnRecipientLocked.textContent = `🔒 RESOLUTION LOCKED (Awaiting ${originator})`;
+      }
+      if (btnRecipientAck) {
+        btnRecipientAck.style.display = 'flex';
+        const alreadyAcked = acks.includes(appState.myIdentity);
+        btnRecipientAck.textContent = alreadyAcked ? '✅ RECEIPT ACKNOWLEDGED (ON MY WAY)' : '🤝 ACKNOWLEDGE & SEND ASSISTANCE';
+        if (alreadyAcked) {
+          btnRecipientAck.style.background = 'rgba(16, 185, 129, 0.2)';
+          btnRecipientAck.style.borderColor = '#10B981';
+          btnRecipientAck.style.color = '#34D399';
+        } else {
+          btnRecipientAck.style.background = 'linear-gradient(135deg, #0284C7, #0369A1)';
+          btnRecipientAck.style.borderColor = '#38BDF8';
+          btnRecipientAck.style.color = '#FFFFFF';
+        }
+      }
     }
   } else {
     if (headerPill) {
@@ -427,7 +530,7 @@ function renderGlobalState(data) {
     }
     if (activeEmergencyCard) activeEmergencyCard.style.display = 'none';
     if (activityHeadline) activityHeadline.textContent = 'No Recent Emergency Incidents';
-    if (activityDetail) activityDetail.textContent = 'All 3 connected peers acknowledging current revision';
+    if (activityDetail) activityDetail.textContent = 'All 10 mesh nodes synchronized across current revision';
     if (activityTime) activityTime.textContent = 'Just now';
     if (sosAmbientGlow) {
       sosAmbientGlow.style.boxShadow = '0 0 40px rgba(239, 68, 68, 0.35)';
@@ -440,8 +543,9 @@ function renderGlobalState(data) {
 
   const devicesVal = document.getElementById('card-devices-val');
   const meshCountVal = document.getElementById('mesh-nodes-count');
-  if (devicesVal) devicesVal.textContent = `${appState.friends.length} Devices`;
-  if (meshCountVal) meshCountVal.textContent = `${appState.friends.length}`;
+  const peerCount = (appState.friends || []).length;
+  if (devicesVal) devicesVal.textContent = `${peerCount} Devices (10-Node Mesh)`;
+  if (meshCountVal) meshCountVal.textContent = `${peerCount}`;
 
   const meetingTitle = document.getElementById('meeting-title-text');
   if (meetingTitle) meetingTitle.textContent = data.meetingPoint;
@@ -485,20 +589,60 @@ async function confirmSosBroadcast() {
 }
 
 async function handleSafeCheckIn() {
+  // Client-side Originator Authority Check
+  if (appState.isEmergency && appState.emergencyOriginator && appState.myIdentity !== appState.emergencyOriginator) {
+    showToast(`⛔ Authority Denied: Only ${appState.emergencyOriginator} can resolve this alert!`);
+    speakVoiceAlert(`Authority denied. Only ${appState.emergencyOriginator} can verify resolution.`);
+    triggerVibration([100, 100, 100]);
+    return;
+  }
+
   try {
     const res = await fetch('/api/safe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sender: appState.myIdentity })
     });
+    const result = await res.json();
     if (res.ok) {
       triggerVibration([200]);
       speakVoiceAlert('You are marked safe. All alerts resolved.');
       fetchStatus();
-      showToast('✅ Safety confirmed. Alert cleared.');
+      showToast('✅ Safety confirmed by originator. Alert cleared.');
+    } else {
+      showToast(`⛔ ${result.message || 'Resolution rejected by mesh authority'}`);
+      speakVoiceAlert('Resolution rejected. Originator authority violation.');
+      triggerVibration([100, 100, 100]);
     }
   } catch (err) {
     console.error(err);
+  }
+}
+
+function handleUnauthorizedResolveAttempt() {
+  const originator = appState.emergencyOriginator || 'the originator';
+  showToast(`🔒 Resolution Locked: Only ${originator} can resolve this alert!`);
+  speakVoiceAlert(`Action denied. Authority to verify resolution belongs exclusively to ${originator}.`);
+  triggerVibration([150, 80, 150]);
+}
+
+async function handleRecipientAck() {
+  try {
+    const res = await fetch('/api/ack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: appState.myIdentity })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      playMessageBeep();
+      triggerVibration([120]);
+      showToast(`🤝 Acknowledged! Mesh receipt recorded (${data.acksCount}/${data.totalNodes} Nodes)`);
+      speakVoiceAlert(`Acknowledgement registered for ${appState.myIdentity}`);
+      fetchStatus();
+    }
+  } catch (err) {
+    showToast('Failed to record acknowledgement');
   }
 }
 
@@ -578,7 +722,10 @@ function renderDevices(friends) {
   const container = document.getElementById('devices-container');
   if (!container || !friends) return;
 
-  container.innerHTML = friends.map(f => `
+  // Filter out self so device sees the other 9 nodes in the 10-node mesh
+  const peers = friends.filter(f => f.name !== appState.myIdentity);
+
+  container.innerHTML = peers.map(f => `
     <div class="device-item-card">
       <div class="device-item-top">
         <div class="device-peer-info">
@@ -586,6 +733,7 @@ function renderDevices(friends) {
           <div>
             <div class="device-peer-name">
               ${f.name}
+              ${f.role ? `<span style="font-size:10px; color:#94A3B8; margin-left:4px;">(${f.role})</span>` : ''}
               ${f.isBuddy ? '<span class="buddy-badge">PRIMARY BUDDY</span>' : ''}
             </div>
             <div class="device-meta-sub">${f.distance} • Battery: ${f.battery}</div>
@@ -896,4 +1044,16 @@ function showToast(message) {
   window.__toastTimeout = setTimeout(() => {
     toast.style.opacity = '0';
   }, 2800);
+}
+
+
+// --- QR CODE MODAL HELPERS ---
+function openQrModal() {
+  const modal = document.getElementById('qr-modal-dialog');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeQrModal() {
+  const modal = document.getElementById('qr-modal-dialog');
+  if (modal) modal.style.display = 'none';
 }

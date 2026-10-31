@@ -154,6 +154,31 @@ Carried within payload for periodic proximity tracking:
 
 ---
 
+### 3.3 Originator Resolution Authority & 10-Node Mesh Protocol
+`
+[Node A (Originator)] ──── Emits P0 SOS (Rev 1) ────► [10-Node Multi-Hop Mesh]
+       │                                                         │
+       │                                                    Flooded to Nodes 2..10
+       │                                                         │
+       ▼                                                         ▼
+[Sole Resolution Authority]                              [Recipient Nodes 2..10]
+       │                                                         │
+       ├─► 'I AM SAFE' (Authorized)                              ├─► Resolution Locked 🔒
+       │   Publishes Rev 2: RESOLVED                             │   (HTTP 403 Forbidden on safe check-in)
+       │   Broadcasted to all 10 Nodes                           │
+       │                                                         └─► Emit ACK Receipt (STORED)
+       ▼                                                             Convergence counter: [10/10 Nodes]
+[Mesh Alert Cleared across All Nodes]
+`
+
+#### Authority Validation Invariant:
+1. When IncidentSnapshot is created with sourceUserId = A, node A is the immutable **originator**.
+2. Any subsequent state transition to status: resolved or confirmationStatus: confirmedSafe MUST be signed and submitted by sourceUserId = A.
+3. If any recipient node B != A attempts to resolve the incident, the local mesh engine and the network protocol immediately reject the request with UNAUTHORIZED_RESOLUTION_ATTEMPT.
+4. Recipient nodes can only submit ReceiptType.stored, ASSISTANCE_DISPATCHED, or text acknowledgements.
+
+---
+
 ## 4. Platform Support Matrix
 
 | Capability | Android Implementation | iOS Status & Adaptation |

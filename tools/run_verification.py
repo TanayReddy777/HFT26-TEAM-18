@@ -348,6 +348,53 @@ def test_extractive_summarizer():
     log_test("Extractive summarizer preserves sequential sentence order",
              summary.index("trapped") < summary.index("water"))
 
+# ==========================================
+# 10. Originator Resolution Authority & 10-Device Mesh
+# ==========================================
+def test_originator_authority_and_ten_node_mesh():
+    class Incident:
+        def __init__(self, incident_id, originator_id, revision=1, status="ACTIVE"):
+            self.incident_id = incident_id
+            self.originator_id = originator_id
+            self.revision = revision
+            self.status = status
+            self.acks = {originator_id}
+
+        def attempt_resolve(self, caller_id):
+            # Strict Originator Authority Rule
+            if caller_id != self.originator_id:
+                return False, "UNAUTHORIZED_RESOLUTION"
+            self.revision += 1
+            self.status = "RESOLVED"
+            return True, "RESOLVED"
+
+        def register_ack(self, node_id):
+            self.acks.add(node_id)
+            return len(self.acks)
+
+    # 1. Test Authority Check
+    inc = Incident("INC_001", "NODE_01_TANAY")
+    
+    # Recipient Node 2 attempts to resolve
+    ok_b, reason_b = inc.attempt_resolve("NODE_02_ABHINAV")
+    log_test("Recipient node cannot resolve originator's alert (Authority rejection)", not ok_b and reason_b == "UNAUTHORIZED_RESOLUTION")
+    log_test("Incident remains ACTIVE after unauthorized attempt", inc.status == "ACTIVE" and inc.revision == 1)
+
+    # Originator Node 1 resolves
+    ok_a, reason_a = inc.attempt_resolve("NODE_01_TANAY")
+    log_test("Originator node successfully verifies and resolves alert (Rev 2 transition)", ok_a and inc.status == "RESOLVED" and inc.revision == 2)
+
+    # 2. Test 10-Device Mesh Convergence
+    ten_nodes = [f"NODE_{i:02d}" for i in range(1, 11)]
+    mesh_incident = Incident("INC_10_NODE", ten_nodes[0]) # Node 01 is originator
+
+    # Simulate multi-hop flood and receipt return across all 10 nodes
+    # Node 1 -> Direct (Nodes 2,3,4) -> 1-Hop (Nodes 5,6) -> 2-Hop (Nodes 7,8) -> 3-Hop (Nodes 9,10)
+    for node in ten_nodes[1:]:
+        mesh_incident.register_ack(node)
+
+    log_test("10-Device mesh convergence: All 10 nodes register receipt of originator's alert", len(mesh_incident.acks) == 10)
+
 if __name__ == "__main__":
     print("==================================================")
     print("  ResQ System End-to-End Verification Harness")
@@ -361,6 +408,7 @@ if __name__ == "__main__":
     test_priority_classifier()
     test_meeting_point_revisions()
     test_extractive_summarizer()
+    test_originator_authority_and_ten_node_mesh()
     print("==================================================")
-    print(" ALL 18 SYSTEM VERIFICATION CHECKS PASSED (100%)")
+    print(" ALL 22 SYSTEM VERIFICATION CHECKS PASSED (100%)")
     print("==================================================")

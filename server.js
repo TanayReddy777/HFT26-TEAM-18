@@ -1,5 +1,6 @@
-// Simple ResQ MVP Backend Server
+// ResQ Production Offline Mesh Backend Server
 // Built with pure Node.js (Zero external dependencies required)
+// Full 10-Node Mesh Support with Originator Verification Authority
 
 const http = require('http');
 const fs = require('fs');
@@ -9,29 +10,42 @@ const url = require('url');
 const PORT = 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// In-Memory Simple MVP State
+// 10 Decentralized Mesh Nodes across Team ResQ & Field Peers
+const ALL_DEVICES = [
+  { id: 1, name: 'Phone 1 (Tanay)', role: 'Team Leader', distance: '0m (Local)', battery: '85%', status: 'Safe', isBuddy: false, rssi: -30, hops: 'Origin Node', lastSeen: 'Active' },
+  { id: 2, name: 'Phone 2 (Abhinav)', role: 'Field Operations', distance: '32 meters away', battery: '88%', status: 'Safe', isBuddy: true, rssi: -54, hops: 'Direct BLE', lastSeen: '2s ago' },
+  { id: 3, name: 'Phone 3 (Sahasra)', role: 'Medical Lead', distance: '65 meters away', battery: '92%', status: 'Safe', isBuddy: true, rssi: -62, hops: 'Direct BLE', lastSeen: '4s ago' },
+  { id: 4, name: 'Phone 4 (Ram)', role: 'Rescue Relay', distance: '110 meters away', battery: '76%', status: 'Safe', isBuddy: false, rssi: -74, hops: 'Direct BLE', lastSeen: '6s ago' },
+  { id: 5, name: 'Phone 5 (Vamshi)', role: 'Network Mesh', distance: '145 meters away', battery: '81%', status: 'Safe', isBuddy: false, rssi: -79, hops: '1-Hop via Ram', lastSeen: '8s ago' },
+  { id: 6, name: 'Phone 6 (Ravi)', role: 'Scout Alpha', distance: '180 meters away', battery: '69%', status: 'Safe', isBuddy: false, rssi: -83, hops: '1-Hop via Abhinav', lastSeen: '5s ago' },
+  { id: 7, name: 'Phone 7 (Priya)', role: 'Camp Base', distance: '210 meters away', battery: '58%', status: 'Safe', isBuddy: false, rssi: -88, hops: '2-Hop via Ravi', lastSeen: '12s ago' },
+  { id: 8, name: 'Phone 8 (Anil)', role: 'Bridge Watch', distance: '260 meters away', battery: '73%', status: 'Safe', isBuddy: false, rssi: -91, hops: '2-Hop via Sahasra', lastSeen: '7s ago' },
+  { id: 9, name: 'Phone 9 (Sneha)', role: 'Perimeter Scout', distance: '310 meters away', battery: '64%', status: 'Safe', isBuddy: false, rssi: -94, hops: '3-Hop via Anil', lastSeen: '15s ago' },
+  { id: 10, name: 'Phone 10 (Kiran)', role: 'Evacuation Escort', distance: '375 meters away', battery: '95%', status: 'Safe', isBuddy: false, rssi: -96, hops: '3-Hop via Sneha', lastSeen: '10s ago' }
+];
+
+// In-Memory Simple MVP State with Originator Authority Tracking
 let state = {
   isEmergency: false,
+  emergencyOriginator: null,   // Authoritative node that triggered the alert
   emergencyReason: '',
   emergencyTime: null,
+  emergencyRevision: 0,
+  emergencyAcks: [],           // Devices that have acknowledged receipt
   batteryLevel: 85,
   inDangerZone: false,
   meetingPoint: 'Camp Alpha (Near Lake Bridge)',
-  friends: [
-    { id: 1, name: 'Ravi', distance: '45 meters away', battery: '82%', status: 'Safe', isBuddy: true, rssi: -58, hops: 'Direct BLE', lastSeen: '3s ago' },
-    { id: 2, name: 'Priya', distance: '115 meters away', battery: '38%', status: 'Far from group', isBuddy: false, rssi: -81, hops: 'Direct BLE', lastSeen: '12s ago' },
-    { id: 3, name: 'Anil', distance: '190 meters away', battery: '91%', status: 'Safe', isBuddy: false, rssi: -89, hops: '1-Hop via Ravi', lastSeen: '5s ago' }
-  ],
+  friends: ALL_DEVICES,
   messages: [
     {
       id: 1,
-      sender: 'Ravi',
+      sender: 'Phone 6 (Ravi)',
       priority: 'P1',
       text: 'వంతెన దగ్గర ఉన్నాము, సహాయం కావాలి.',
       translation: 'We are near the bridge, need help.',
       time: '2 mins ago',
       hops: '1 Hop',
-      status: 'Delivered (ACK 2/2)'
+      status: 'Delivered (ACK 10/10)'
     }
   ]
 };
@@ -148,7 +162,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. POST /api/sos (Trigger Emergency SOS with instant audio & vibration broadcast)
+  // 3. POST /api/sos (Trigger Emergency SOS with Originator Authority Binding)
   if (pathname === '/api/sos' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -156,39 +170,57 @@ const server = http.createServer((req, res) => {
       let data = {};
       try { data = JSON.parse(body); } catch (_) {}
 
+      const senderName = data.sender || 'Phone 1 (Tanay)';
       state.isEmergency = true;
+      state.emergencyOriginator = senderName; // BIND ORIGINATOR AUTHORITY
+      state.emergencyRevision = (state.emergencyRevision || 0) + 1;
       state.emergencyReason = data.reason || 'User pressed the Emergency SOS button';
       state.emergencyTime = new Date().toLocaleTimeString();
+      state.emergencyAcks = [senderName]; // Originator auto-acknowledged
 
-      const senderName = data.sender || 'Mesh Node';
-      // Add emergency message to chat
+      // Update peer status in list
+      state.friends.forEach(f => {
+        if (f.name === senderName) {
+          f.status = '🚨 SOS ACTIVE';
+        }
+      });
+
       const alertMsg = {
         id: Date.now(),
         sender: senderName,
         priority: 'P0',
-        text: '🚨 EMERGENCY SOS: ' + state.emergencyReason,
-        translation: '🚨 అత్యవసర సహాయం కోరబడింది',
+        text: `🚨 [EMERGENCY SOS - REV ${state.emergencyRevision}] ${state.emergencyReason}. Sole resolution authority: ${senderName}`,
+        translation: '🚨 [అత్యవసర సహాయం] తక్షణ సహాయం కోరబడింది.',
         time: 'Just now',
-        hops: 'Flooded (All Mesh)',
-        status: 'Delivered (ACK All Peers)'
+        hops: 'Flooded (10-Node Mesh)',
+        status: `Broadcasted (Originator: ${senderName})`
       };
       state.messages.push(alertMsg);
 
-      // Instant Push to all connected phones!
+      // Instant Push to all 10 devices!
       broadcastEvent('SOS_TRIGGERED', {
         reason: state.emergencyReason,
         time: state.emergencyTime,
         sender: senderName,
+        originator: senderName,
+        revision: state.emergencyRevision,
+        acks: state.emergencyAcks,
         alertMsg
       });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Emergency SOS activated and sent to all friends.', state }));
+      res.end(JSON.stringify({
+        success: true,
+        message: `Emergency SOS broadcasted across 10-node mesh. Originator authority locked to ${senderName}.`,
+        originator: senderName,
+        revision: state.emergencyRevision,
+        state
+      }));
     });
     return;
   }
 
-  // 4. POST /api/safe (Clear Emergency / I am Safe)
+  // 4. POST /api/safe (Clear Emergency / Resolve - STRICT ORIGINATOR AUTHORITY)
   if (pathname === '/api/safe' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -196,31 +228,114 @@ const server = http.createServer((req, res) => {
       let data = {};
       try { data = JSON.parse(body); } catch (_) {}
 
+      const caller = data.sender || 'Unknown Node';
+
+      // 🔐 STRICT ORIGINATOR AUTHORITY RULE:
+      // Only the device that sent the alert has the authority to verify resolution!
+      if (state.isEmergency && state.emergencyOriginator && caller !== state.emergencyOriginator) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'UNAUTHORIZED_RESOLUTION_ATTEMPT',
+          originator: state.emergencyOriginator,
+          caller: caller,
+          message: `ACCESS DENIED: Authority to verify resolution rests exclusively with originator "${state.emergencyOriginator}". Recipient device "${caller}" cannot resolve this alert on their behalf.`
+        }));
+        return;
+      }
+
+      // If authorized (caller is the originator):
+      const previousOriginator = state.emergencyOriginator || caller;
       state.isEmergency = false;
+      state.emergencyRevision = (state.emergencyRevision || 0) + 1;
+      state.emergencyOriginator = null;
       state.emergencyReason = '';
       state.emergencyTime = null;
+      state.emergencyAcks = [];
+
+      // Reset all peer statuses back to Safe
+      state.friends.forEach(f => { f.status = 'Safe'; });
 
       const safeMsg = {
         id: Date.now(),
-        sender: data.sender || 'You',
+        sender: caller,
         priority: 'P3',
-        text: '✅ I am safe now. The emergency alert is resolved.',
-        translation: '✅ నేను ఇప్పుడు సురక్షితంగా ఉన్నాను.',
+        text: `✅ [ISSUE RESOLVED - REV ${state.emergencyRevision}] Originator (${caller}) verified situation is safe. Mesh emergency cancelled.`,
+        translation: '✅ [పరిష్కరించబడింది] అత్యవసర పరిస్థితి పరిష్కరించబడింది.',
         time: 'Just now',
-        hops: 'Direct',
-        status: 'Delivered'
+        hops: 'Direct BLE',
+        status: 'Delivered (ACK 10/10 Nodes)'
       };
       state.messages.push(safeMsg);
 
-      broadcastEvent('SOS_CLEARED', { state, safeMsg });
+      broadcastEvent('SOS_CLEARED', {
+        state,
+        safeMsg,
+        originator: previousOriginator,
+        resolvedBy: caller,
+        revision: state.emergencyRevision
+      });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Marked as safe. Group alert cancelled.', state }));
+      res.end(JSON.stringify({
+        success: true,
+        message: `Marked as safe. Emergency resolved by authorized originator ${caller}. Broadcasted to all 10 devices.`,
+        resolvedBy: caller,
+        revision: state.emergencyRevision,
+        state
+      }));
     });
     return;
   }
 
-  // 4. POST /api/message (Send simple chat message with translation)
+  // 5. POST /api/ack (Recipient Devices Acknowledge Receipt across 10-node mesh)
+  if (pathname === '/api/ack' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let data = {};
+      try { data = JSON.parse(body); } catch (_) {}
+
+      const ackDevice = data.sender || 'Unknown Node';
+      if (!state.emergencyAcks) state.emergencyAcks = [];
+      if (!state.emergencyAcks.includes(ackDevice)) {
+        state.emergencyAcks.push(ackDevice);
+      }
+
+      const ackMsg = {
+        id: Date.now(),
+        sender: ackDevice,
+        priority: 'P2',
+        text: `🤝 [ACK - REV ${state.emergencyRevision}] ${ackDevice} acknowledged ${state.emergencyOriginator}'s SOS (${state.emergencyAcks.length}/10 Nodes)`,
+        translation: '🤝 రసీదు నమోదు చేయబడింది.',
+        time: 'Just now',
+        hops: '1-Hop Mesh',
+        status: `Acknowledged (${state.emergencyAcks.length}/10)`
+      };
+      state.messages.push(ackMsg);
+
+      broadcastEvent('SOS_ACKNOWLEDGED', {
+        device: ackDevice,
+        originator: state.emergencyOriginator,
+        acksCount: state.emergencyAcks.length,
+        totalNodes: state.friends.length,
+        state
+      });
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        device: ackDevice,
+        originator: state.emergencyOriginator,
+        acksCount: state.emergencyAcks.length,
+        totalNodes: state.friends.length,
+        state
+      }));
+    });
+    return;
+  }
+
+  // 6. POST /api/message (Send simple chat message with translation)
   if (pathname === '/api/message' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -236,28 +351,37 @@ const server = http.createServer((req, res) => {
       }
 
       const priority = data.priority || 'P2';
+      const senderName = data.sender || 'Phone 1 (Tanay)';
       const msg = {
         id: Date.now(),
-        sender: data.sender || 'You',
+        sender: senderName,
         priority: priority,
-        recipient: data.recipient || 'Broadcast (All Nodes)',
+        recipient: data.recipient || 'Broadcast (All 10 Nodes)',
         text: text,
         translation: autoTranslate(text),
         time: 'Just now',
-        hops: priority === 'P0' ? 'Flooded (All Mesh)' : (data.hops || '1 Hop'),
-        status: 'Delivered (ACK 2/2)'
+        hops: priority === 'P0' ? 'Flooded (All 10 Nodes)' : (data.hops || '1 Hop'),
+        status: 'Delivered (ACK 10/10)'
       };
 
       state.messages.push(msg);
 
-      // If message is P0 or trauma, flag emergency status
+      // If message is P0 or trauma, flag emergency status with originator authority
       if (priority === 'P0') {
         state.isEmergency = true;
+        state.emergencyOriginator = senderName;
+        state.emergencyRevision = (state.emergencyRevision || 0) + 1;
         state.emergencyReason = text;
         state.emergencyTime = new Date().toLocaleTimeString();
+        state.emergencyAcks = [senderName];
+        state.friends.forEach(f => {
+          if (f.name === senderName) {
+            f.status = '🚨 SOS ACTIVE';
+          }
+        });
       }
 
-      broadcastEvent('NEW_MESSAGE', { msg, isEmergency: state.isEmergency });
+      broadcastEvent('NEW_MESSAGE', { msg, isEmergency: state.isEmergency, originator: state.emergencyOriginator });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, message: msg, isEmergency: state.isEmergency }));
@@ -265,7 +389,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 5. POST /api/battery (Change battery level to test warnings)
+  // 7. POST /api/battery (Change battery level to test warnings)
   if (pathname === '/api/battery' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -285,7 +409,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 6. POST /api/meeting-point (Update meeting location)
+  // 8. POST /api/meeting-point (Update meeting location)
   if (pathname === '/api/meeting-point' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -305,7 +429,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 7. POST /api/scan (Simulate discovering and pinging nearby nodes)
+  // 9. POST /api/scan (Simulate discovering and pinging nearby nodes across 10-node mesh)
   if (pathname === '/api/scan' && req.method === 'POST') {
     // Dynamic RSSI slight variance simulating living RF environment
     state.friends.forEach(f => {
@@ -361,8 +485,9 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`===============================================`);
-  console.log(` ResQ Simple MVP Server running on:`);
+  console.log(` ResQ 10-Node Mesh Server with Originator Authority`);
   console.log(` 👉 Localhost:       http://localhost:${PORT}/`);
   console.log(` 👉 Phone on Wi-Fi:  http://172.34.12.124:${PORT}/`);
+  console.log(` 👉 Active Nodes:    10 Decentralized Devices`);
   console.log(`===============================================`);
 });
