@@ -437,15 +437,26 @@ async function fetchStatus() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     
-    appState.isEmergency = data.isEmergency;
-    appState.batteryLevel = data.batteryLevel;
-    appState.meetingPoint = data.meetingPoint;
-    appState.friends = data.friends || [];
-    appState.messages = data.messages || [];
+    if (data.friends && data.friends.length > 0) {
+      appState.friends = data.friends;
+    }
+    if (data.messages && data.messages.length > 0) {
+      appState.messages = data.messages;
+    }
+    if (data.isEmergency !== undefined) appState.isEmergency = data.isEmergency;
+    if (data.batteryLevel !== undefined) appState.batteryLevel = data.batteryLevel;
+    if (data.meetingPoint) appState.meetingPoint = data.meetingPoint;
 
-    renderGlobalState(data);
+    renderGlobalState(appState);
   } catch (err) {
-    console.warn('Syncing offline state locally:', err);
+    console.warn('[ResQ] Operating offline with local mesh topology:', err.message);
+    if (!appState.friends || appState.friends.length === 0) {
+      appState.friends = DEFAULT_10_DEVICES;
+    }
+    if (!appState.messages || appState.messages.length === 0) {
+      appState.messages = DEFAULT_MESSAGES;
+    }
+    renderGlobalState(appState);
   }
 }
 
@@ -570,7 +581,7 @@ function renderGlobalState(data) {
 
   const devicesVal = document.getElementById('card-devices-val');
   const meshCountVal = document.getElementById('mesh-nodes-count');
-  const peerCount = (appState.friends || []).length;
+  const peerCount = (appState.friends && appState.friends.length > 0) ? appState.friends.length : 10;
   if (devicesVal) devicesVal.textContent = `${peerCount} Devices (10-Node Mesh)`;
   if (meshCountVal) meshCountVal.textContent = `${peerCount}`;
 

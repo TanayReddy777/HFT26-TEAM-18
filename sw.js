@@ -3,7 +3,7 @@
  * Ensures 100% offline execution even in Airplane mode without any internet access.
  */
 
-const CACHE_NAME = 'resq-offline-v5';
+const CACHE_NAME = 'resq-offline-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -42,22 +42,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // If request is for an API endpoint, try network first, fall back to offline JSON if disconnected
+  // Let API calls go to network, or fail naturally so app.js offline engine handles them
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return new Response(JSON.stringify({
-          offline: true,
-          isEmergency: false,
-          batteryLevel: 85,
-          meetingPoint: 'Camp Alpha (Near Lake Bridge)',
-          friends: [],
-          messages: []
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
     return;
   }
 
@@ -77,7 +63,7 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => {
       // Offline fallback: serve index.html for page navigation
       if (event.request.mode === 'navigate') {
-        return caches.match('/index.html');
+        return caches.match('./index.html');
       }
       return caches.match(event.request, { ignoreSearch: true });
     })
