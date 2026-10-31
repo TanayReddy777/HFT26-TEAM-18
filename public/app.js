@@ -241,22 +241,67 @@ function initClock() {
   setInterval(updateTime, 1000);
 }
 
-// 5. Real-Time SSE (Server-Sent Events) Stream
+// 5. Real-Time SSE (Server-Sent Events) Stream & Decentralized Mesh Relay Bridge
+const MESH_RELAY_URL = 'https://ntfy.sh/resq-mesh-team18-live';
+
+function broadcastMeshEvent(type, payload, state) {
+  const envelope = {
+    type,
+    payload: payload || {},
+    state: state || appState,
+    sender: appState.myIdentity,
+    timestamp: Date.now()
+  };
+
+  // 1. Local Wi-Fi server (if running on same machine/router)
+  fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(envelope)
+  }).catch(() => {});
+
+  // 2. Multi-Phone P2P Mesh Bridge (Syncs Phone A and Phone B across Netlify & mobile browsers)
+  fetch(MESH_RELAY_URL, {
+    method: 'POST',
+    body: JSON.stringify(envelope)
+  }).catch(() => {});
+}
+
 function initSSE() {
-  const evtSource = new EventSource('/api/events');
+  // Connect to the multi-phone live mesh bridge so Phone A and Phone B sync in real-time
+  try {
+    const evtSource = new EventSource(`${MESH_RELAY_URL}/sse`);
+    evtSource.onmessage = (event) => {
+      try {
+        const raw = JSON.parse(event.data);
+        if (raw.event === 'message' && raw.message) {
+          const data = JSON.parse(raw.message);
+          // Ignore self-broadcasts so originator handles its own state
+          if (data.sender && data.sender === appState.myIdentity) return;
+          console.log('[ResQ Mesh] Incoming peer packet:', data.type, 'from:', data.sender);
+          handleLiveEvent(data);
+        }
+      } catch (err) {
+        console.warn('Error parsing mesh event:', err);
+      }
+    };
+    evtSource.onerror = () => {
+      console.warn('Mesh relay reconnecting in background...');
+    };
+  } catch (err) {
+    console.warn('Mesh EventSource skipped:', err);
+  }
 
-  evtSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      handleLiveEvent(data);
-    } catch (err) {
-      console.warn('Error parsing SSE event:', err);
-    }
-  };
-
-  evtSource.onerror = () => {
-    console.warn('SSE reconnecting in background...');
-  };
+  // Also listen on local server if running
+  try {
+    const localEvt = new EventSource('/api/events');
+    localEvt.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleLiveEvent(data);
+      } catch (_) {}
+    };
+  } catch (_) {}
 }
 
 function handleLiveEvent(data) {
@@ -661,6 +706,14 @@ function triggerLocalSos(reason, sender) {
   renderGlobalState(appState);
   showToast('🚨 P0 SOS hopping across 10-node mesh!');
 
+  // Real-time P2P Mesh Relay Broadcast to Phone 2 & all peers
+  broadcastMeshEvent('SOS_TRIGGERED', {
+    originator: sender,
+    sender: sender,
+    revision: appState.emergencyRevision,
+    reason: reason
+  }, appState);
+
   // Progressive Store-and-Forward Mesh Relay Receipts
   setTimeout(() => {
     if (appState.isEmergency) {
@@ -749,6 +802,12 @@ function triggerLocalSafe() {
   speakVoiceAlert('You are marked safe. All alerts resolved.');
   renderGlobalState(appState);
   showToast('✅ Safety confirmed by originator. Alert cleared across mesh.');
+
+  // Broadcast resolution to Phone 2 & all peers
+  broadcastMeshEvent('SOS_CLEARED', {
+    resolvedBy: caller,
+    revision: appState.emergencyRevision
+  }, appState);
 }
 
 function handleUnauthorizedResolveAttempt() {
@@ -791,6 +850,12 @@ function triggerLocalAck() {
   showToast(`🤝 Acknowledged! Mesh receipt recorded (${appState.emergencyAcks.length}/10 Nodes)`);
   speakVoiceAlert(`Acknowledgement registered for ${appState.myIdentity}`);
   renderGlobalState(appState);
+
+  // Broadcast ACK to Phone 1 (Originator) in real time
+  broadcastMeshEvent('SOS_ACKNOWLEDGED', {
+    device: appState.myIdentity,
+    acksCount: appState.emergencyAcks.length
+  }, appState);
 }
 
 // 11. SCREEN 2 (SOS DISPATCH) ACTIONS
@@ -940,6 +1005,17 @@ function triggerLocalDispatch(text, priority, sender) {
 
   renderGlobalState(appState);
   showToast(`⚡ ${priority} Mesh Relay Hop Complete! Delivered to all 10 Nodes.`);
+
+  // Broadcast message & P0 emergency across all phones
+  broadcastMeshEvent('NEW_MESSAGE', { msg: newMsg }, appState);
+  if (priority === 'P0') {
+    broadcastMeshEvent('SOS_TRIGGERED', {
+      originator: sender,
+      sender: sender,
+      revision: appState.emergencyRevision,
+      reason: text
+    }, appState);
+  }
 }
 
 // 12. SCREEN 3 (NEARBY DEVICES) ACTIONS & REAL BLUETOOTH
@@ -1126,6 +1202,9 @@ async function sendInboxMessage() {
   triggerVibration([60]);
   renderInbox(appState.messages);
   showToast('⚡ Message hopped across mesh and stored');
+
+  // Broadcast inbox chat message to all peers in real-time
+  broadcastMeshEvent('NEW_MESSAGE', { msg: newMsg }, appState);
 }
 
 // 14. SCREEN 5 (SETTINGS) ACTIONS
