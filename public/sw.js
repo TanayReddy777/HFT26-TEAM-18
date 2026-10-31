@@ -3,7 +3,7 @@
  * Ensures 100% offline execution even in Airplane mode without any internet access.
  */
 
-const CACHE_NAME = 'resq-offline-v4';
+const CACHE_NAME = 'resq-offline-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
