@@ -3,16 +3,16 @@
  * Ensures 100% offline execution even in Airplane mode without any internet access.
  */
 
-const CACHE_NAME = 'resq-offline-v3';
+const CACHE_NAME = 'resq-offline-v4';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon.svg'
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
