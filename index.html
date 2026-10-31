@@ -12,12 +12,12 @@
   <meta name="apple-mobile-web-app-title" content="ResQ">
   <title>ResQ — Offline Emergency Safety System</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="icon.svg">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261031_05">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -28,6 +28,7 @@
     <div class="desktop-helper-bar">
       <div class="live-pill">● LIVE WORKING MODEL</div>
       <div class="wifi-tip">📲 Test on Phone: <code>http://172.34.12.124:3000</code></div>
+      <button class="btn-toggle-frame" onclick="openQrModal()" id="qr-modal-btn">📷 Scan QR Code</button>
       <button class="btn-toggle-frame" onclick="togglePhoneFrame()" id="frame-toggle-btn">📱 Toggle Fullscreen View</button>
     </div>
 
@@ -57,9 +58,16 @@
           <div class="identity-left">
             <span class="identity-label">DEVICE:</span>
             <select class="identity-select" id="device-identity-select" onchange="changeDeviceIdentity(this.value)">
-              <option value="Phone 1 (Tanay)">📱 Phone 1 (Tanay)</option>
-              <option value="Phone 2 (Ravi)">🛡️ Phone 2 (Ravi - Buddy)</option>
-              <option value="Phone 3 (Anil)">📡 Phone 3 (Anil - Relay)</option>
+              <option value="Phone 1 (Tanay)">📱 Node 1: Phone 1 (Tanay - Leader)</option>
+              <option value="Phone 2 (Abhinav)">📱 Node 2: Phone 2 (Abhinav - Ops)</option>
+              <option value="Phone 3 (Sahasra)">📱 Node 3: Phone 3 (Sahasra - Medical)</option>
+              <option value="Phone 4 (Ram)">📱 Node 4: Phone 4 (Ram - Rescue)</option>
+              <option value="Phone 5 (Vamshi)">📱 Node 5: Phone 5 (Vamshi - Network)</option>
+              <option value="Phone 6 (Ravi)">📱 Node 6: Phone 6 (Ravi - Scout)</option>
+              <option value="Phone 7 (Priya)">📱 Node 7: Phone 7 (Priya - Camp Base)</option>
+              <option value="Phone 8 (Anil)">📱 Node 8: Phone 8 (Anil - Bridge Watch)</option>
+              <option value="Phone 9 (Sneha)">📱 Node 9: Phone 9 (Sneha - Perimeter)</option>
+              <option value="Phone 10 (Kiran)">📱 Node 10: Phone 10 (Kiran - Escort)</option>
             </select>
           </div>
           <button class="btn-enable-sensors" id="btn-sensors-sound" onclick="enableSensorsAndAudio()">🔊 Enable Alarm/Sensors</button>
@@ -145,15 +153,40 @@
             </button>
           </div>
 
-          <!-- Emergency Active Banner -->
+          <!-- Emergency Active Banner with Originator Authority -->
           <div class="emergency-state-banner" id="active-emergency-card" style="display: none;">
             <div class="banner-top-row">
-              <span class="p0-badge">P0 CRITICAL SOS</span>
-              <span class="live-dot-pulse">● LIVE BROADCAST</span>
+              <span class="p0-badge" id="emergency-p0-badge">P0 CRITICAL SOS</span>
+              <span class="live-dot-pulse" id="emergency-live-tag">● LIVE 10-NODE MESH</span>
             </div>
-            <p class="banner-message" id="banner-incident-text">Emergency help broadcasted across mesh to all 3 devices.</p>
-            <div class="banner-actions">
-              <button class="btn-safe-cancel" onclick="handleSafeCheckIn()">✅ I AM SAFE (CANCEL ALERT)</button>
+            
+            <div class="authority-badge-row">
+              <span class="authority-pill authority-pill-originator" id="authority-pill">👑 ORIGINATOR AUTHORITY</span>
+              <span class="text-slate-muted" style="font-size: 11px;" id="emergency-revision-tag">Rev 1</span>
+            </div>
+
+            <p class="banner-message" id="banner-incident-text">Emergency help broadcasted across mesh to all 10 devices.</p>
+            
+            <!-- Dynamic Role-Aware Authority Explanation Box -->
+            <div class="authority-banner-box originator" id="authority-explanation-box">
+              <strong id="authority-box-title">👑 Originator Authority Verified:</strong>
+              <span id="authority-box-text">You originated this emergency. You have exclusive authority to verify if the issue is resolved.</span>
+            </div>
+
+            <!-- 10-Node Mesh Convergence Bar -->
+            <div class="ack-progress-section" id="emergency-ack-progress">
+              <div class="ack-nodes-header">
+                <span>📡 10-Node Mesh Convergence:</span>
+                <strong id="ack-nodes-text">1 of 10 Nodes (Originator)</strong>
+              </div>
+              <div class="ack-progress-bar"><div class="ack-progress-fill" id="ack-nodes-bar" style="width: 10%"></div></div>
+            </div>
+
+            <!-- Dynamic Actions Depending on Role (Originator vs Recipient) -->
+            <div class="banner-actions" id="banner-actions-wrap">
+              <button class="btn-safe-cancel" id="btn-originator-resolve" onclick="handleSafeCheckIn()">✅ I AM SAFE — VERIFY ISSUE RESOLVED</button>
+              <button class="btn-safe-locked" id="btn-recipient-locked" style="display: none;" onclick="handleUnauthorizedResolveAttempt()">🔒 RESOLUTION LOCKED (Awaiting Originator Verification)</button>
+              <button class="btn-ack-assist" id="btn-recipient-ack" style="display: none;" onclick="handleRecipientAck()">🤝 ACKNOWLEDGE & DISPATCH ASSISTANCE</button>
             </div>
           </div>
 
@@ -514,6 +547,22 @@
     </div>
   </div>
 
+  <!-- MODAL 3: PHONE QR CODE DIALOG -->
+  <div class="m3-dialog-backdrop" id="qr-modal-dialog" style="display: none;" onclick="if(event.target === this) closeQrModal()">
+    <div class="m3-dialog-card" style="text-align: center; max-width: 360px;">
+      <div class="dialog-icon-badge">📱</div>
+      <h3 class="dialog-title">Scan on Your Phone</h3>
+      <p class="dialog-message" style="margin-bottom: 14px;">Connect your phone to the same Wi-Fi network and scan this QR code with your phone camera:</p>
+      <div style="background: white; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <img src="qr.png" alt="Scan to test on phone" style="width: 200px; height: 200px; display: block;" />
+      </div>
+      <p style="margin-top: 14px; font-family: monospace; font-size: 13px; color: #06B6D4;">http://172.34.12.124:3000</p>
+      <div class="dialog-actions" style="margin-top: 16px; justify-content: center;">
+        <button class="dialog-btn-confirm" onclick="closeQrModal()" style="width: 100%;">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 2: FALL DETECTION 15-SECOND COUNTDOWN -->
   <div class="m3-dialog-backdrop" id="fall-countdown-dialog" style="display: none;">
     <div class="m3-dialog-card fall-alert-modal">
@@ -531,6 +580,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261031_04"></script>
+  <script src="app.js"></script>
 </body>
 </html>

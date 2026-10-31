@@ -3,13 +3,16 @@
  * Ensures 100% offline execution even in Airplane mode without any internet access.
  */
 
-const CACHE_NAME = 'resq-offline-v1';
+const CACHE_NAME = 'resq-offline-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -58,21 +61,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first strategy for static assets (HTML, CSS, JS) so app loads instantly in Airplane Mode
+  // Cache-first strategy for static assets (HTML, CSS, JS, icons) with ignoreSearch so query strings match
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch in background to update cache (stale-while-revalidate)
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {});
         return cachedResponse;
       }
-      return fetch(event.request);
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      });
     }).catch(() => {
-      return caches.match('/index.html');
+      // Offline fallback: serve index.html for page navigation
+      if (event.request.mode === 'navigate') {
+        return caches.match('/index.html');
+      }
+      return caches.match(event.request, { ignoreSearch: true });
     })
   );
 });

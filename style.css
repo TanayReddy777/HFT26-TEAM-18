@@ -1859,3 +1859,140 @@ body {
     display: none;
   }
 }
+
+/* ==========================================================================
+   ResQ Originator Authority & 10-Node Mesh Styles
+   ========================================================================== */
+.authority-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.authority-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.authority-pill-originator {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.authority-pill-recipient {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.authority-banner-box {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.authority-banner-box strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.authority-banner-box.originator {
+  border-left: 3px solid #10B981;
+  color: #E2E8F0;
+}
+
+.authority-banner-box.recipient {
+  border-left: 3px solid #F59E0B;
+  color: #CBD5E1;
+}
+
+.btn-safe-locked {
+  width: 100%;
+  background: #1E293B;
+  color: #94A3B8;
+  border: 1px dashed #475569;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: not-allowed;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0.9;
+}
+
+.btn-safe-locked:hover {
+  background: #283548;
+}
+
+.btn-ack-assist {
+  width: 100%;
+  background: linear-gradient(135deg, #0284C7, #0369A1);
+  color: white;
+  border: 1px solid #38BDF8;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.15s ease;
+}
+
+.btn-ack-assist:active {
+  transform: scale(0.98);
+}
+
+.ack-progress-section {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ack-nodes-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-slate-muted);
+  margin-bottom: 6px;
+}
+
+.ack-nodes-header strong {
+  color: var(--cyan-accent);
+}
+
+.ack-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ack-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #06B6D4, #10B981);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
