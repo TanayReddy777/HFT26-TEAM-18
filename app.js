@@ -38,7 +38,7 @@ let deferredPrompt = null;
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
       console.log('[ResQ] Offline ServiceWorker active:', reg.scope);
       if (reg.active) {
         console.log('[ResQ] Cache ready for offline use');
